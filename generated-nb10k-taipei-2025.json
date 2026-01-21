@@ -1,0 +1,480 @@
+{
+  "event_id": "nb10k-taipei-2025",
+  "version": "1.0",
+  "name": "2025 NB10K 城市路跑系列賽-台北站",
+
+  "variables": {
+    "registration_fee": 1000,
+    "shipping_1": 130,
+    "shipping_2": 180,
+    "shipping_3_5": 350,
+    "shipping_6_20": 750,
+    "shipping_21_50": 1000,
+    "shipping_51_100": 1880,
+    "shipping_101_200": 2500,
+    "shipping_per_100_above_200": 500
+  },
+
+  "computed_fields": {
+    "birth_year": {
+      "type": "item_price",
+      "description": "從年齡推算出生年（暫時使用 user.birth_year 欄位）",
+      "item": "user.birth_year"
+    }
+  },
+
+  "pricing_rules": [
+    {
+      "id": "base_registration_fee",
+      "priority": 0,
+      "description": "基礎報名費 NT$1,000",
+      "condition": {
+        "type": "always_true"
+      },
+      "action": {
+        "type": "set_price",
+        "item": "registration_fee",
+        "value": "$variables.registration_fee",
+        "label": "10KM 競賽組報名費"
+      }
+    },
+    {
+      "id": "shipping_1_person",
+      "priority": 10,
+      "description": "宅配運費 1人 NT$130",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "==",
+            "value": 1
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_1",
+        "label": "宅配運費 (1人)"
+      }
+    },
+    {
+      "id": "shipping_2_person",
+      "priority": 10,
+      "description": "宅配運費 2人 NT$180",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "==",
+            "value": 2
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_2",
+        "label": "宅配運費 (2人)"
+      }
+    },
+    {
+      "id": "shipping_3_5_person",
+      "priority": 10,
+      "description": "宅配運費 3-5人 NT$350",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 3
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 5
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_3_5",
+        "label": "宅配運費 (3-5人)"
+      }
+    },
+    {
+      "id": "shipping_6_20_person",
+      "priority": 10,
+      "description": "宅配運費 6-20人 NT$750",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 6
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 20
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_6_20",
+        "label": "宅配運費 (6-20人)"
+      }
+    },
+    {
+      "id": "shipping_21_50_person",
+      "priority": 10,
+      "description": "宅配運費 21-50人 NT$1,000",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 21
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 50
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_21_50",
+        "label": "宅配運費 (21-50人)"
+      }
+    },
+    {
+      "id": "shipping_51_100_person",
+      "priority": 10,
+      "description": "宅配運費 51-100人 NT$1,880",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 51
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 100
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_51_100",
+        "label": "宅配運費 (51-100人)"
+      }
+    },
+    {
+      "id": "shipping_101_200_person",
+      "priority": 10,
+      "description": "宅配運費 101-200人 NT$2,500",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "equals",
+            "field": "user.pickup_method",
+            "value": "mail"
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 101
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 200
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": "$variables.shipping_101_200",
+        "label": "宅配運費 (101-200人)"
+      }
+    }
+  ],
+
+  "validation_rules": [
+    {
+      "id": "registration_period",
+      "description": "報名時間限制（一般報名）",
+      "condition": {
+        "type": "not",
+        "condition": {
+          "type": "datetime_between",
+          "field": "register_date",
+          "start": "2025-08-04T12:00:00+08:00",
+          "end": "2025-08-31T17:00:00+08:00"
+        }
+      },
+      "error_type": "blocking",
+      "error_message": "一般報名時間為 2025/8/4 12:00 至 2025/8/31 17:00，目前不在報名時間內"
+    },
+    {
+      "id": "age_restriction",
+      "description": "年齡限制：2017年以前出生",
+      "condition": {
+        "type": "compare",
+        "field": "user.birth_year",
+        "operator": ">",
+        "value": 2017
+      },
+      "error_type": "blocking",
+      "error_message": "為維護青少年與兒童身心發展，參賽年齡限制為 2017 年以前出生者（8歲以上）"
+    },
+    {
+      "id": "minor_parent_consent",
+      "description": "未滿18歲需家長同意",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "user.birth_year",
+            "operator": ">",
+            "value": 2007
+          },
+          {
+            "type": "not",
+            "condition": {
+              "type": "equals",
+              "field": "user.has_parent_consent",
+              "value": true
+            }
+          }
+        ]
+      },
+      "error_type": "blocking",
+      "error_message": "未滿18歲參賽者需勾選「未成年報名者家長或監護人同意書」"
+    },
+    {
+      "id": "quota_warning_mail_group",
+      "description": "郵寄組名額警告",
+      "condition": {
+        "type": "equals",
+        "field": "user.pickup_method",
+        "value": "mail"
+      },
+      "error_type": "warning",
+      "error_message": "一般郵寄組限額 2,500 人，額滿將提早截止報名"
+    },
+    {
+      "id": "quota_warning_onsite_1121",
+      "description": "11/21 現場領物組名額警告",
+      "condition": {
+        "type": "equals",
+        "field": "user.pickup_method",
+        "value": "onsite_1121"
+      },
+      "error_type": "warning",
+      "error_message": "賽前現場領物 11/21(五) 組限額 400 人，額滿將提早截止報名"
+    },
+    {
+      "id": "quota_warning_onsite_1122",
+      "description": "11/22 現場領物組名額警告",
+      "condition": {
+        "type": "equals",
+        "field": "user.pickup_method",
+        "value": "onsite_1122"
+      },
+      "error_type": "warning",
+      "error_message": "賽前現場領物 11/22(六) 組限額 600 人，額滿將提早截止報名"
+    },
+    {
+      "id": "health_warning",
+      "description": "健康狀況警告",
+      "condition": {
+        "type": "always_true"
+      },
+      "error_type": "warning",
+      "error_message": "如您曾發生胸悶、胸痛、心臟病史、糖尿病、高血壓等病況，屬猝死高危險群，請諮詢醫師後再決定是否參加。"
+    }
+  ],
+
+  "form_schema": {
+    "fields": [
+      {
+        "id": "name",
+        "label": "姓名",
+        "type": "text",
+        "field": "user.name",
+        "required": true,
+        "placeholder": "請輸入真實姓名"
+      },
+      {
+        "id": "id_number",
+        "label": "身分證字號（外籍人士請填護照號碼）",
+        "type": "text",
+        "field": "user.id_number",
+        "required": true,
+        "placeholder": "例：A123456789"
+      },
+      {
+        "id": "birth_year",
+        "label": "出生年份",
+        "type": "number",
+        "field": "user.birth_year",
+        "required": true,
+        "min": 1920,
+        "max": 2017,
+        "placeholder": "例：2000"
+      },
+      {
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "field": "user.email",
+        "required": true,
+        "placeholder": "example@email.com"
+      },
+      {
+        "id": "phone",
+        "label": "手機號碼",
+        "type": "text",
+        "field": "user.phone",
+        "required": true,
+        "placeholder": "0912-345-678"
+      },
+      {
+        "id": "tshirt_size",
+        "label": "紀念短T尺寸",
+        "type": "select",
+        "field": "user.tshirt_size",
+        "required": true,
+        "options": [
+          {"label": "請選擇尺寸", "value": ""},
+          {"label": "XS", "value": "XS"},
+          {"label": "S", "value": "S"},
+          {"label": "M", "value": "M"},
+          {"label": "L", "value": "L"},
+          {"label": "XL", "value": "XL"},
+          {"label": "2XL", "value": "2XL"},
+          {"label": "3XL", "value": "3XL"}
+        ]
+      },
+      {
+        "id": "gender",
+        "label": "性別（T恤版型不同）",
+        "type": "select",
+        "field": "user.gender",
+        "required": true,
+        "options": [
+          {"label": "請選擇", "value": ""},
+          {"label": "男款", "value": "male"},
+          {"label": "女款", "value": "female"}
+        ]
+      },
+      {
+        "id": "pickup_method",
+        "label": "領取方式",
+        "type": "select",
+        "field": "user.pickup_method",
+        "required": true,
+        "options": [
+          {"label": "請選擇領取方式", "value": ""},
+          {"label": "一般郵寄組 (2,500人)", "value": "mail"},
+          {"label": "賽前現場領物 11/21(五) (400人) - 送號碼布扣", "value": "onsite_1121"},
+          {"label": "賽前現場領物 11/22(六) (600人) - 送號碼布扣", "value": "onsite_1122"}
+        ]
+      },
+      {
+        "id": "team_size",
+        "label": "訂單人數（影響宅配費）",
+        "type": "number",
+        "field": "team_size",
+        "required": true,
+        "default_value": 1,
+        "min": 1,
+        "max": 500
+      },
+      {
+        "id": "shipping_address",
+        "label": "宅配地址（僅郵寄組需填寫）",
+        "type": "text",
+        "field": "user.shipping_address",
+        "required": false,
+        "placeholder": "請填寫日間有人可簽收的地址"
+      },
+      {
+        "id": "has_parent_consent",
+        "label": "我已取得家長或監護人同意（未滿18歲必勾）",
+        "type": "checkbox",
+        "field": "user.has_parent_consent",
+        "default_value": false
+      },
+      {
+        "id": "agree_terms",
+        "label": "我已詳閱並同意參賽聲明及競賽規程",
+        "type": "checkbox",
+        "field": "user.agree_terms",
+        "required": true,
+        "default_value": false
+      }
+    ]
+  }
+}

@@ -1,0 +1,448 @@
+{
+  "event_id": "dahoo-strawberry-marathon-2026",
+  "version": "1.0",
+  "name": "2026大湖草莓文化嘉年華馬拉松",
+  "variables": {
+    "full_marathon_price": 1050,
+    "half_marathon_price": 950,
+    "jogging_price": 850,
+    "leisure_price": 700,
+    "insurance_plan_a_price": 91,
+    "insurance_plan_b_price": 173
+  },
+  "pricing_rules": [
+    {
+      "id": "full_marathon_registration",
+      "priority": 0,
+      "description": "全程馬拉松報名費",
+      "condition": {
+        "type": "equals",
+        "field": "user.race_type",
+        "value": "full_marathon"
+      },
+      "action": {
+        "type": "set_price",
+        "item": "registration_fee",
+        "value": 1050,
+        "label": "全程馬拉松報名費 (含晶片)"
+      }
+    },
+    {
+      "id": "half_marathon_registration",
+      "priority": 0,
+      "description": "半程馬拉松報名費",
+      "condition": {
+        "type": "equals",
+        "field": "user.race_type",
+        "value": "half_marathon"
+      },
+      "action": {
+        "type": "set_price",
+        "item": "registration_fee",
+        "value": 950,
+        "label": "半程馬拉松報名費 (含晶片)"
+      }
+    },
+    {
+      "id": "jogging_registration",
+      "priority": 0,
+      "description": "健跑組報名費",
+      "condition": {
+        "type": "equals",
+        "field": "user.race_type",
+        "value": "jogging"
+      },
+      "action": {
+        "type": "set_price",
+        "item": "registration_fee",
+        "value": 850,
+        "label": "健跑組報名費 (含晶片)"
+      }
+    },
+    {
+      "id": "leisure_registration",
+      "priority": 0,
+      "description": "休閒組報名費",
+      "condition": {
+        "type": "equals",
+        "field": "user.race_type",
+        "value": "leisure"
+      },
+      "action": {
+        "type": "set_price",
+        "item": "registration_fee",
+        "value": 700,
+        "label": "休閒組報名費 (無晶片)"
+      }
+    },
+    {
+      "id": "shipping_1_to_2",
+      "priority": 10,
+      "description": "宅配運費 (1-2人)",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 1
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 2
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 150,
+        "label": "宅配運費 (1-2人)"
+      }
+    },
+    {
+      "id": "shipping_3_to_5",
+      "priority": 10,
+      "description": "宅配運費 (3-5人)",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 3
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 5
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 200,
+        "label": "宅配運費 (3-5人)"
+      }
+    },
+    {
+      "id": "shipping_6_to_10",
+      "priority": 10,
+      "description": "宅配運費 (6-10人)",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 6
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 10
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 300,
+        "label": "宅配運費 (6-10人)"
+      }
+    },
+    {
+      "id": "shipping_11_to_20",
+      "priority": 10,
+      "description": "宅配運費 (11-20人)",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 11
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 20
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 400,
+        "label": "宅配運費 (11-20人)"
+      }
+    },
+    {
+      "id": "shipping_21_to_30",
+      "priority": 10,
+      "description": "宅配運費 (21-30人)",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": ">=",
+            "value": 21
+          },
+          {
+            "type": "compare",
+            "field": "team_size",
+            "operator": "<=",
+            "value": 30
+          }
+        ]
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 500,
+        "label": "宅配運費 (21-30人)"
+      }
+    },
+    {
+      "id": "shipping_31_plus",
+      "priority": 10,
+      "description": "宅配運費 (31人以上)",
+      "condition": {
+        "type": "compare",
+        "field": "team_size",
+        "operator": ">=",
+        "value": 31
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:shipping",
+        "fixed_price": 600,
+        "label": "宅配運費 (31人以上)"
+      }
+    },
+    {
+      "id": "insurance_plan_a",
+      "priority": 20,
+      "description": "加購傷害險方案A",
+      "condition": {
+        "type": "equals",
+        "field": "addons.insurance_plan",
+        "value": "plan_a"
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:insurance",
+        "unit_price": 91,
+        "label": "特定活動傷害險 方案A (100萬身故/10萬醫療)"
+      }
+    },
+    {
+      "id": "insurance_plan_b",
+      "priority": 20,
+      "description": "加購傷害險方案B",
+      "condition": {
+        "type": "equals",
+        "field": "addons.insurance_plan",
+        "value": "plan_b"
+      },
+      "action": {
+        "type": "add_item",
+        "item": "addon:insurance",
+        "unit_price": 173,
+        "label": "特定活動傷害險 方案B (200萬身故/20萬醫療)"
+      }
+    }
+  ],
+  "validation_rules": [
+    {
+      "id": "registration_period",
+      "description": "報名時間限制",
+      "condition": {
+        "type": "not",
+        "condition": {
+          "type": "datetime_between",
+          "field": "register_date",
+          "start": "2025-09-22T13:00:00+08:00",
+          "end": "2025-12-15T23:59:59+08:00"
+        }
+      },
+      "error_type": "blocking",
+      "error_message": "報名時間為 2025/9/22 13:00 至 2025/12/15 23:59，目前不在報名時間內"
+    },
+    {
+      "id": "minor_needs_consent",
+      "description": "未滿18歲需檢附家長同意書",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "compare",
+            "field": "user.age",
+            "operator": "<",
+            "value": 18
+          },
+          {
+            "type": "not",
+            "condition": {
+              "type": "equals",
+              "field": "user.has_parent_consent",
+              "value": true
+            }
+          }
+        ]
+      },
+      "error_type": "blocking",
+      "error_message": "未滿18歲參賽者需檢附家長同意切結書"
+    },
+    {
+      "id": "insurance_age_limit",
+      "description": "保險年齡限制15-69歲",
+      "condition": {
+        "type": "and",
+        "conditions": [
+          {
+            "type": "not",
+            "condition": {
+              "type": "field_empty",
+              "field": "addons.insurance_plan"
+            }
+          },
+          {
+            "type": "or",
+            "conditions": [
+              {
+                "type": "compare",
+                "field": "user.age",
+                "operator": "<",
+                "value": 15
+              },
+              {
+                "type": "compare",
+                "field": "user.age",
+                "operator": ">",
+                "value": 69
+              }
+            ]
+          }
+        ]
+      },
+      "error_type": "blocking",
+      "error_message": "特定活動傷害險僅承保15-69歲跑者，您的年齡不符合投保資格"
+    },
+    {
+      "id": "health_warning",
+      "description": "健康狀況警告",
+      "condition": {
+        "type": "always_true"
+      },
+      "error_type": "warning",
+      "error_message": "請注意：如有心臟、血管、糖尿病等病歷者，請勿參加。參賽者應自行評估健康狀況，如因個人健康因素導致意外，主辦單位不負任何責任。"
+    },
+    {
+      "id": "race_type_required",
+      "description": "必須選擇賽事組別",
+      "condition": {
+        "type": "field_empty",
+        "field": "user.race_type"
+      },
+      "error_type": "blocking",
+      "error_message": "請選擇賽事組別（全程馬拉松/半程馬拉松/健跑組/休閒組）"
+    }
+  ],
+  "discount_stacking": {
+    "mode": "additive",
+    "description": "此活動無折扣優惠，所有費用直接加總"
+  },
+  "form_schema": {
+    "fields": [
+      {
+        "id": "name",
+        "label": "姓名",
+        "type": "text",
+        "field": "user.name",
+        "required": true,
+        "placeholder": "請輸入姓名"
+      },
+      {
+        "id": "email",
+        "label": "Email",
+        "type": "email",
+        "field": "user.email",
+        "required": true,
+        "placeholder": "請輸入 Email"
+      },
+      {
+        "id": "phone",
+        "label": "手機",
+        "type": "text",
+        "field": "user.phone",
+        "required": true,
+        "placeholder": "請輸入手機"
+      },
+      {
+        "id": "age",
+        "label": "年齡",
+        "type": "number",
+        "field": "user.age",
+        "required": true,
+        "min": 1,
+        "max": 120,
+        "placeholder": "請輸入年齡"
+      },
+      {
+        "id": "race_type",
+        "label": "賽事組別",
+        "type": "select",
+        "field": "user.race_type",
+        "required": true,
+        "options": [
+          { "label": "請選擇組別", "value": "" },
+          { "label": "全程馬拉松 (42公里) - NT$1,050", "value": "full_marathon" },
+          { "label": "半程馬拉松 (21公里) - NT$950", "value": "half_marathon" },
+          { "label": "健跑組 (11公里) - NT$850", "value": "jogging" },
+          { "label": "休閒組 (5公里) - NT$700", "value": "leisure" }
+        ]
+      },
+      {
+        "id": "team_size",
+        "label": "團體報名人數（包含自己）",
+        "type": "number",
+        "field": "team_size",
+        "default_value": 1,
+        "min": 1,
+        "max": 100,
+        "placeholder": "輸入團體報名人數"
+      },
+      {
+        "id": "insurance_plan",
+        "label": "特定活動傷害險（15-69歲可投保）",
+        "type": "select",
+        "field": "addons.insurance_plan",
+        "options": [
+          { "label": "不加保", "value": "" },
+          { "label": "方案A - 100萬身故/10萬醫療 (NT$91)", "value": "plan_a" },
+          { "label": "方案B - 200萬身故/20萬醫療 (NT$173)", "value": "plan_b" }
+        ]
+      },
+      {
+        "id": "has_parent_consent",
+        "label": "我已取得家長同意（未滿18歲必填）",
+        "type": "checkbox",
+        "field": "user.has_parent_consent",
+        "default_value": false
+      }
+    ]
+  }
+}

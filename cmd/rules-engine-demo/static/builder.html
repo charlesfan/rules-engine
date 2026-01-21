@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>賽事規則建立器</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="datetime-local"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .item-list {
+            list-style: none;
+        }
+
+        .item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-content {
+            flex: 1;
+        }
+
+        .item-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .item-detail {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+
+        .item-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 頂部導航 -->
+            <div class="header">
+                <h1>{{ eventData.name || '新賽事規則建立' }}</h1>
+                <div class="header-actions">
+                    <button @click="openJSONEditor" class="btn btn-secondary">JSON 編輯器</button>
+                    <button @click="exportJSON" class="btn btn-primary">匯出 JSON</button>
+                    <button @click="previewEvent" class="btn btn-success">預覽報名頁面</button>
+                </div>
+            </div>
+
+            <!-- 基本資訊卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">📋</span>
+                        基本資訊
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>賽事名稱</label>
+                        <input type="text" v-model="eventData.name" placeholder="例如：2026大湖草莓馬拉松">
+                    </div>
+                    <div class="form-group">
+                        <label>賽事 ID</label>
+                        <input type="text" v-model="eventData.event_id" placeholder="例如：dahoo-marathon-2026">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>報名開始時間</label>
+                        <input type="datetime-local" v-model="eventData.registration_start">
+                    </div>
+                    <div class="form-group">
+                        <label>報名結束時間</label>
+                        <input type="datetime-local" v-model="eventData.registration_end">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 報名費設定卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">💰</span>
+                        報名費設定
+                    </div>
+                    <button @click="showAddRaceType" class="btn btn-primary btn-small">+ 新增組別</button>
+                </div>
+                <ul class="item-list" v-if="raceTypes.length">
+                    <li class="item" v-for="(race, index) in raceTypes" :key="index">
+                        <div class="item-content">
+                            <div class="item-title">{{ race.name }}</div>
+                            <div class="item-detail">NT$ {{ race.price }}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button @click="editRaceType(index)" class="btn btn-primary btn-small">編輯</button>
+                            <button @click="deleteRaceType(index)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </li>
+                </ul>
+                <div v-else class="empty-state">
+                    尚未新增任何組別，點擊右上角「新增組別」開始設定
+                </div>
+            </div>
+
+            <!-- 運費設定卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">🚚</span>
+                        運費設定
+                    </div>
+                    <button @click="showAddShipping" class="btn btn-primary btn-small">+ 新增運費規則</button>
+                </div>
+                <ul class="item-list" v-if="shippingRules.length">
+                    <li class="item" v-for="(rule, index) in shippingRules" :key="index">
+                        <div class="item-content">
+                            <div class="item-title">{{ rule.name }}</div>
+                            <div class="item-detail">{{ rule.minSize }}-{{ rule.maxSize }}人 · NT$ {{ rule.price }}</div>
+                        </div>
+                        <div class="item-actions">
+                            <button @click="editShipping(index)" class="btn btn-primary btn-small">編輯</button>
+                            <button @click="deleteShipping(index)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </li>
+                </ul>
+                <div v-else class="empty-state">
+                    尚未新增運費規則
+                </div>
+            </div>
+
+            <!-- 加購項目卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">🛍️</span>
+                        加購項目
+                    </div>
+                    <button @click="showAddAddon" class="btn btn-primary btn-small">+ 新增加購</button>
+                </div>
+                <ul class="item-list" v-if="addons.length">
+                    <li class="item" v-for="(addon, index) in addons" :key="index">
+                        <div class="item-content">
+                            <div class="item-title">{{ addon.name }}</div>
+                            <div class="item-detail">
+                                NT$ {{ addon.price }}
+                                <span class="badge badge-info">{{ addon.priceType === 'per_person' ? '按人數' : '按數量' }}</span>
+                                <span class="badge badge-warning" v-if="addon.hasCondition">{{ addon.conditionText }}</span>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button @click="editAddon(index)" class="btn btn-primary btn-small">編輯</button>
+                            <button @click="deleteAddon(index)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </li>
+                </ul>
+                <div v-else class="empty-state">
+                    尚未新增加購項目
+                </div>
+            </div>
+
+            <!-- 優惠規則卡片 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-icon">🎁</span>
+                        優惠規則
+                    </div>
+                    <button @click="showAddDiscount" class="btn btn-primary btn-small">+ 新增優惠</button>
+                </div>
+                <ul class="item-list" v-if="discounts.length">
+                    <li class="item" v-for="(discount, index) in discounts" :key="index">
+                        <div class="item-content">
+                            <div class="item-title">{{ discount.name }}</div>
+                            <div class="item-detail">
+                                <span v-if="discount.type === 'percentage'">{{ discount.value }}% 折扣</span>
+                                <span v-else>折扣 NT$ {{ discount.value }}</span>
+                                <span class="badge badge-info">{{ discount.applyToText || '套用到報名費' }}</span>
+                                <span class="badge badge-warning" v-if="discount.conditionText">{{ discount.conditionText }}</span>
+                                <span class="badge badge-warning" v-if="discount.hasExclusion">互斥優惠</span>
+                            </div>
+                        </div>
+                        <div class="item-actions">
+                            <button @click="editDiscount(index)" class="btn btn-primary btn-small">編輯</button>
+                            <button @click="deleteDiscount(index)" class="btn btn-danger btn-small">刪除</button>
+                        </div>
+                    </li>
+                </ul>
+                <div v-else class="empty-state">
+                    尚未新增優惠規則
+                </div>
+            </div>
+
+            <!-- 新增/編輯組別 Modal -->
+            <div class="modal" :class="{ active: modals.raceType }">
+                <div class="modal-content">
+                    <div class="modal-header">{{ editingRaceTypeIndex !== null ? '編輯' : '新增' }}組別</div>
+                    <div class="form-group">
+                        <label>組別名稱</label>
+                        <input type="text" v-model="currentRaceType.name" placeholder="例如：全程馬拉松 (42公里)">
+                    </div>
+                    <div class="form-group">
+                        <label>組別代碼</label>
+                        <input type="text" v-model="currentRaceType.id" placeholder="例如：full_marathon">
+                    </div>
+                    <div class="form-group">
+                        <label>報名費（元）</label>
+                        <input type="number" v-model.number="currentRaceType.price" placeholder="1050">
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="closeModal('raceType')" class="btn btn-secondary">取消</button>
+                        <button @click="saveRaceType" class="btn btn-primary">儲存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 新增/編輯運費 Modal -->
+            <div class="modal" :class="{ active: modals.shipping }">
+                <div class="modal-content">
+                    <div class="modal-header">{{ editingShippingIndex !== null ? '編輯' : '新增' }}運費規則</div>
+                    <div class="form-group">
+                        <label>規則名稱</label>
+                        <input type="text" v-model="currentShipping.name" placeholder="例如：宅配運費 (1-2人)">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>最少人數</label>
+                            <input type="number" v-model.number="currentShipping.minSize" placeholder="1">
+                        </div>
+                        <div class="form-group">
+                            <label>最多人數</label>
+                            <input type="number" v-model.number="currentShipping.maxSize" placeholder="2">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>運費（元）</label>
+                        <input type="number" v-model.number="currentShipping.price" placeholder="150">
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="closeModal('shipping')" class="btn btn-secondary">取消</button>
+                        <button @click="saveShipping" class="btn btn-primary">儲存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 新增/編輯加購 Modal -->
+            <div class="modal" :class="{ active: modals.addon }">
+                <div class="modal-content">
+                    <div class="modal-header">{{ editingAddonIndex !== null ? '編輯' : '新增' }}加購項目</div>
+                    <div class="form-group">
+                        <label>項目名稱</label>
+                        <input type="text" v-model="currentAddon.name" placeholder="例如：特定活動傷害險方案A">
+                    </div>
+                    <div class="form-group">
+                        <label>項目代碼</label>
+                        <input type="text" v-model="currentAddon.id" placeholder="例如：insurance_plan_a">
+                    </div>
+                    <div class="form-group">
+                        <label>計費方式</label>
+                        <select v-model="currentAddon.priceType">
+                            <option value="per_person">按人數計費</option>
+                            <option value="per_item">按數量計費</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>單價（元）</label>
+                        <input type="number" v-model.number="currentAddon.price" placeholder="91">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" v-model="currentAddon.hasCondition" style="width: auto; margin-right: 5px;">
+                            設定購買條件
+                        </label>
+                    </div>
+                    <div v-if="currentAddon.hasCondition">
+                        <div class="form-group">
+                            <label>條件類型</label>
+                            <select v-model="currentAddon.conditionType">
+                                <option value="">請選擇條件</option>
+                                <option value="race_type">特定組別才能購買</option>
+                                <option value="age">年齡限制</option>
+                            </select>
+                        </div>
+                        <div class="form-group" v-if="currentAddon.conditionType === 'race_type'">
+                            <label>適用組別（可多選）</label>
+                            <select v-model="currentAddon.conditionRaceTypes" multiple style="height: 100px;">
+                                <option v-for="race in raceTypes" :key="race.id" :value="race.id">{{ race.name }}</option>
+                            </select>
+                        </div>
+                        <div v-if="currentAddon.conditionType === 'age'">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>最小年齡</label>
+                                    <input type="number" v-model.number="currentAddon.conditionAgeMin" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>最大年齡</label>
+                                    <input type="number" v-model.number="currentAddon.conditionAgeMax" placeholder="999">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="closeModal('addon')" class="btn btn-secondary">取消</button>
+                        <button @click="saveAddon" class="btn btn-primary">儲存</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 新增/編輯優惠 Modal -->
+            <div class="modal" :class="{ active: modals.discount }">
+                <div class="modal-content">
+                    <div class="modal-header">{{ editingDiscountIndex !== null ? '編輯' : '新增' }}優惠規則</div>
+                    <div class="form-group">
+                        <label>優惠名稱</label>
+                        <input type="text" v-model="currentDiscount.name" placeholder="例如：長距離優惠">
+                    </div>
+                    <div class="form-group">
+                        <label>優惠類型</label>
+                        <select v-model="currentDiscount.type">
+                            <option value="percentage">百分比折扣</option>
+                            <option value="fixed">固定金額折扣</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label v-if="currentDiscount.type === 'percentage'">折扣百分比（例如：10 代表 10% off）</label>
+                        <label v-else>折扣金額（元）</label>
+                        <input type="number" v-model.number="currentDiscount.value" placeholder="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label>套用到</label>
+                        <select v-model="currentDiscount.applyTo">
+                            <option value="registration_fee">報名費</option>
+                            <option value="total">總金額</option>
+                            <option value="addon:*">所有加購項目</option>
+                            <option value="custom">自訂項目</option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="currentDiscount.applyTo === 'custom'">
+                        <label>選擇套用項目（可多選）</label>
+                        <select v-model="currentDiscount.applyToCustom" multiple style="height: 100px;">
+                            <option value="registration_fee">報名費</option>
+                            <option v-for="addon in addons" :key="addon.id" :value="'addon:' + addon.id">{{ addon.name }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>適用條件</label>
+                        <select v-model="currentDiscount.condition">
+                            <option value="">無條件適用</option>
+                            <option value="race_type">特定組別</option>
+                            <option value="min_amount">最低消費金額</option>
+                            <option value="early_bird">早鳥優惠（時間限制）</option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="currentDiscount.condition === 'race_type'">
+                        <label>適用組別（可多選）</label>
+                        <select v-model="currentDiscount.raceTypes" multiple style="height: 100px;">
+                            <option v-for="race in raceTypes" :key="race.id" :value="race.id">{{ race.name }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="currentDiscount.condition === 'min_amount'">
+                        <label>最低金額（元）</label>
+                        <input type="number" v-model.number="currentDiscount.minAmount" placeholder="2000">
+                    </div>
+                    <div class="form-group" v-if="currentDiscount.condition === 'early_bird'">
+                        <label>優惠截止日期</label>
+                        <input type="datetime-local" v-model="currentDiscount.earlyBirdDate">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" v-model="currentDiscount.hasExclusion" style="width: auto; margin-right: 5px;">
+                            設定互斥優惠（不可與其他優惠同時使用）
+                        </label>
+                    </div>
+                    <div class="form-group" v-if="currentDiscount.hasExclusion">
+                        <label>不可同時使用的優惠（可多選）</label>
+                        <select v-model="currentDiscount.excludedDiscounts" multiple style="height: 100px;">
+                            <option v-for="(d, idx) in discounts" :key="idx" :value="'discount_' + idx">{{ d.name }}</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button @click="closeModal('discount')" class="btn btn-secondary">取消</button>
+                        <button @click="saveDiscount" class="btn btn-primary">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    eventData: {
+                        name: '',
+                        event_id: '',
+                        registration_start: '',
+                        registration_end: ''
+                    },
+                    raceTypes: [],
+                    shippingRules: [],
+                    addons: [],
+                    discounts: [],
+                    modals: {
+                        raceType: false,
+                        shipping: false,
+                        addon: false,
+                        discount: false
+                    },
+                    currentRaceType: { name: '', id: '', price: 0 },
+                    currentShipping: { name: '', minSize: 1, maxSize: 2, price: 0 },
+                    currentAddon: {
+                        name: '',
+                        id: '',
+                        priceType: 'per_person',
+                        price: 0,
+                        hasCondition: false,
+                        conditionType: '',
+                        conditionRaceTypes: [],
+                        conditionAgeMin: 0,
+                        conditionAgeMax: 999
+                    },
+                    currentDiscount: {
+                        name: '',
+                        type: 'percentage',
+                        value: 0,
+                        condition: '',
+                        raceTypes: [],
+                        minAmount: 0,
+                        dateCondition: '',
+                        earlyBirdDate: '',
+                        applyTo: 'registration_fee',
+                        applyToCustom: [],
+                        hasExclusion: false,
+                        excludedDiscounts: []
+                    },
+                    editingRaceTypeIndex: null,
+                    editingShippingIndex: null,
+                    editingAddonIndex: null,
+                    editingDiscountIndex: null
+                };
+            },
+            methods: {
+                showAddRaceType() {
+                    this.currentRaceType = { name: '', id: '', price: 0 };
+                    this.editingRaceTypeIndex = null;
+                    this.modals.raceType = true;
+                },
+                editRaceType(index) {
+                    this.currentRaceType = { ...this.raceTypes[index] };
+                    this.editingRaceTypeIndex = index;
+                    this.modals.raceType = true;
+                },
+                saveRaceType() {
+                    if (this.editingRaceTypeIndex !== null) {
+                        this.raceTypes[this.editingRaceTypeIndex] = { ...this.currentRaceType };
+                    } else {
+                        this.raceTypes.push({ ...this.currentRaceType });
+                    }
+                    this.closeModal('raceType');
+                },
+                deleteRaceType(index) {
+                    if (confirm('確定要刪除此組別嗎？')) {
+                        this.raceTypes.splice(index, 1);
+                    }
+                },
+                showAddShipping() {
+                    this.currentShipping = { name: '', minSize: 1, maxSize: 2, price: 0 };
+                    this.editingShippingIndex = null;
+                    this.modals.shipping = true;
+                },
+                editShipping(index) {
+                    this.currentShipping = { ...this.shippingRules[index] };
+                    this.editingShippingIndex = index;
+                    this.modals.shipping = true;
+                },
+                saveShipping() {
+                    if (this.editingShippingIndex !== null) {
+                        this.shippingRules[this.editingShippingIndex] = { ...this.currentShipping };
+                    } else {
+                        this.shippingRules.push({ ...this.currentShipping });
+                    }
+                    this.closeModal('shipping');
+                },
+                deleteShipping(index) {
+                    if (confirm('確定要刪除此運費規則嗎？')) {
+                        this.shippingRules.splice(index, 1);
+                    }
+                },
+                showAddAddon() {
+                    this.currentAddon = {
+                        name: '',
+                        id: '',
+                        priceType: 'per_person',
+                        price: 0,
+                        hasCondition: false,
+                        conditionType: '',
+                        conditionRaceTypes: [],
+                        conditionAgeMin: 0,
+                        conditionAgeMax: 999
+                    };
+                    this.editingAddonIndex = null;
+                    this.modals.addon = true;
+                },
+                editAddon(index) {
+                    this.currentAddon = { ...this.addons[index] };
+                    // 確保陣列屬性正確複製
+                    if (this.addons[index].conditionRaceTypes) {
+                        this.currentAddon.conditionRaceTypes = [...this.addons[index].conditionRaceTypes];
+                    }
+                    this.editingAddonIndex = index;
+                    this.modals.addon = true;
+                },
+                saveAddon() {
+                    const addon = { ...this.currentAddon };
+
+                    // 生成條件文字
+                    if (addon.hasCondition) {
+                        if (addon.conditionType === 'race_type' && addon.conditionRaceTypes.length) {
+                            const raceNames = addon.conditionRaceTypes.map(id => {
+                                const race = this.raceTypes.find(r => r.id === id);
+                                return race ? race.name : id;
+                            });
+                            addon.conditionText = '限定：' + raceNames.join('、');
+                        } else if (addon.conditionType === 'age') {
+                            addon.conditionText = `年齡 ${addon.conditionAgeMin}-${addon.conditionAgeMax} 歲`;
+                        }
+                    }
+
+                    if (this.editingAddonIndex !== null) {
+                        this.addons[this.editingAddonIndex] = addon;
+                    } else {
+                        this.addons.push(addon);
+                    }
+                    this.closeModal('addon');
+                },
+                deleteAddon(index) {
+                    if (confirm('確定要刪除此加購項目嗎？')) {
+                        this.addons.splice(index, 1);
+                    }
+                },
+                showAddDiscount() {
+                    this.currentDiscount = {
+                        name: '',
+                        type: 'percentage',
+                        value: 0,
+                        condition: '',
+                        raceTypes: [],
+                        minAmount: 0,
+                        dateCondition: '',
+                        earlyBirdDate: '',
+                        applyTo: 'registration_fee',
+                        applyToCustom: [],
+                        hasExclusion: false,
+                        excludedDiscounts: []
+                    };
+                    this.editingDiscountIndex = null;
+                    this.modals.discount = true;
+                },
+                editDiscount(index) {
+                    this.currentDiscount = { ...this.discounts[index] };
+                    // 確保陣列屬性正確複製
+                    if (this.discounts[index].raceTypes) {
+                        this.currentDiscount.raceTypes = [...this.discounts[index].raceTypes];
+                    }
+                    if (this.discounts[index].applyToCustom) {
+                        this.currentDiscount.applyToCustom = [...this.discounts[index].applyToCustom];
+                    }
+                    if (this.discounts[index].excludedDiscounts) {
+                        this.currentDiscount.excludedDiscounts = [...this.discounts[index].excludedDiscounts];
+                    }
+                    this.editingDiscountIndex = index;
+                    this.modals.discount = true;
+                },
+                saveDiscount() {
+                    const discount = { ...this.currentDiscount };
+
+                    // 生成套用目標文字
+                    if (discount.applyTo === 'registration_fee') {
+                        discount.applyToText = '報名費';
+                    } else if (discount.applyTo === 'total') {
+                        discount.applyToText = '總金額';
+                    } else if (discount.applyTo === 'addon:*') {
+                        discount.applyToText = '所有加購';
+                    } else if (discount.applyTo === 'custom' && discount.applyToCustom.length) {
+                        const items = discount.applyToCustom.map(item => {
+                            if (item === 'registration_fee') return '報名費';
+                            const addon = this.addons.find(a => 'addon:' + a.id === item);
+                            return addon ? addon.name : item;
+                        });
+                        discount.applyToText = items.join('、');
+                    }
+
+                    // 生成條件文字
+                    if (discount.condition === 'race_type' && discount.raceTypes.length) {
+                        const raceNames = discount.raceTypes.map(id => {
+                            const race = this.raceTypes.find(r => r.id === id);
+                            return race ? race.name : id;
+                        });
+                        discount.conditionText = '限定：' + raceNames.join('、');
+                    } else if (discount.condition === 'min_amount') {
+                        discount.conditionText = `滿 ${discount.minAmount} 元`;
+                    } else if (discount.condition === 'early_bird') {
+                        const date = new Date(discount.earlyBirdDate);
+                        discount.conditionText = `早鳥：${date.toLocaleDateString()}前`;
+                    }
+
+                    if (this.editingDiscountIndex !== null) {
+                        this.discounts[this.editingDiscountIndex] = discount;
+                    } else {
+                        this.discounts.push(discount);
+                    }
+                    this.closeModal('discount');
+                },
+                deleteDiscount(index) {
+                    if (confirm('確定要刪除此優惠規則嗎？')) {
+                        this.discounts.splice(index, 1);
+                    }
+                },
+                closeModal(type) {
+                    this.modals[type] = false;
+                },
+                exportJSON() {
+                    const dsl = this.generateDSL();
+                    const json = JSON.stringify(dsl, null, 2);
+
+                    // 下載 JSON 檔案
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${this.eventData.event_id || 'event'}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                },
+                previewEvent() {
+                    const dsl = this.generateDSL();
+                    localStorage.setItem('preview_rules', JSON.stringify(dsl));
+                    window.open('/preview', '_blank');
+                },
+                openJSONEditor() {
+                    const dsl = this.generateDSL();
+                    localStorage.setItem('builder_data', JSON.stringify(dsl));
+                    window.location.href = '/editor';
+                },
+                generateDSL() {
+                    const dsl = {
+                        event_id: this.eventData.event_id || 'new-event',
+                        version: '1.0',
+                        name: this.eventData.name || '新賽事',
+                        pricing_rules: [],
+                        validation_rules: [],
+                        form_schema: {
+                            fields: []
+                        }
+                    };
+
+                    let priority = 0;
+
+                    // 生成賽事組別規則
+                    this.raceTypes.forEach(race => {
+                        dsl.pricing_rules.push({
+                            id: `${race.id}_registration`,
+                            priority: priority++,
+                            description: `${race.name}報名費`,
+                            condition: {
+                                type: 'equals',
+                                field: 'user.race_type',
+                                value: race.id
+                            },
+                            action: {
+                                type: 'set_price',
+                                item: 'registration_fee',
+                                value: race.price,
+                                label: race.name
+                            }
+                        });
+                    });
+
+                    // 生成運費規則
+                    priority = 10;
+                    this.shippingRules.forEach((rule, idx) => {
+                        const conditions = [];
+                        conditions.push({
+                            type: 'compare',
+                            field: 'team_size',
+                            operator: '>=',
+                            value: rule.minSize
+                        });
+                        if (rule.maxSize) {
+                            conditions.push({
+                                type: 'compare',
+                                field: 'team_size',
+                                operator: '<=',
+                                value: rule.maxSize
+                            });
+                        }
+
+                        dsl.pricing_rules.push({
+                            id: `shipping_${idx}`,
+                            priority: priority++,
+                            description: rule.name,
+                            condition: conditions.length > 1 ? {
+                                type: 'and',
+                                conditions: conditions
+                            } : conditions[0],
+                            action: {
+                                type: 'add_item',
+                                item: 'addon:shipping',
+                                fixed_price: rule.price,
+                                label: rule.name
+                            }
+                        });
+                    });
+
+                    // 生成加購項目規則
+                    priority = 20;
+                    this.addons.forEach(addon => {
+                        // 建立基礎條件：使用者勾選了此加購
+                        const baseCondition = {
+                            type: 'equals',
+                            field: `addons.${addon.id}`,
+                            value: true
+                        };
+
+                        let finalCondition = baseCondition;
+
+                        // 如果有購買條件，組合條件
+                        if (addon.hasCondition && addon.conditionType) {
+                            const conditions = [baseCondition];
+
+                            if (addon.conditionType === 'race_type' && addon.conditionRaceTypes && addon.conditionRaceTypes.length) {
+                                if (addon.conditionRaceTypes.length === 1) {
+                                    conditions.push({
+                                        type: 'equals',
+                                        field: 'user.race_type',
+                                        value: addon.conditionRaceTypes[0]
+                                    });
+                                } else {
+                                    conditions.push({
+                                        type: 'or',
+                                        conditions: addon.conditionRaceTypes.map(raceId => ({
+                                            type: 'equals',
+                                            field: 'user.race_type',
+                                            value: raceId
+                                        }))
+                                    });
+                                }
+                            } else if (addon.conditionType === 'age') {
+                                const ageConditions = [];
+                                if (addon.conditionAgeMin > 0) {
+                                    ageConditions.push({
+                                        type: 'compare',
+                                        field: 'user.age',
+                                        operator: '>=',
+                                        value: addon.conditionAgeMin
+                                    });
+                                }
+                                if (addon.conditionAgeMax < 999) {
+                                    ageConditions.push({
+                                        type: 'compare',
+                                        field: 'user.age',
+                                        operator: '<=',
+                                        value: addon.conditionAgeMax
+                                    });
+                                }
+                                if (ageConditions.length > 0) {
+                                    conditions.push(ageConditions.length === 1 ? ageConditions[0] : {
+                                        type: 'and',
+                                        conditions: ageConditions
+                                    });
+                                }
+                            }
+
+                            finalCondition = conditions.length > 1 ? {
+                                type: 'and',
+                                conditions: conditions
+                            } : baseCondition;
+                        }
+
+                        dsl.pricing_rules.push({
+                            id: `addon_${addon.id}`,
+                            priority: priority++,
+                            description: addon.name,
+                            condition: finalCondition,
+                            action: {
+                                type: 'add_item',
+                                item: `addon:${addon.id}`,
+                                [addon.priceType === 'per_person' ? 'unit_price' : 'unit_price']: addon.price,
+                                [addon.priceType === 'per_person' ? 'quantity_field' : 'quantity_field']: addon.priceType === 'per_person' ? 'team_size' : `addons.${addon.id}_quantity`,
+                                label: addon.name
+                            }
+                        });
+                    });
+
+                    // 生成優惠規則
+                    priority = 100;
+                    this.discounts.forEach((discount, idx) => {
+                        let condition = { type: 'always_true' };
+
+                        // 建立條件
+                        if (discount.condition === 'race_type' && discount.raceTypes && discount.raceTypes.length) {
+                            if (discount.raceTypes.length === 1) {
+                                condition = {
+                                    type: 'equals',
+                                    field: 'user.race_type',
+                                    value: discount.raceTypes[0]
+                                };
+                            } else {
+                                condition = {
+                                    type: 'or',
+                                    conditions: discount.raceTypes.map(raceId => ({
+                                        type: 'equals',
+                                        field: 'user.race_type',
+                                        value: raceId
+                                    }))
+                                };
+                            }
+                        } else if (discount.condition === 'min_amount') {
+                            // 需要 computed field
+                            if (!dsl.computed_fields) {
+                                dsl.computed_fields = {};
+                            }
+                            dsl.computed_fields.subtotal = {
+                                type: 'sum_prices',
+                                items: ['registration_fee', 'addon:*'],
+                                description: '小計'
+                            };
+
+                            condition = {
+                                type: 'compare',
+                                field: '$computed.subtotal',
+                                operator: '>=',
+                                value: discount.minAmount
+                            };
+                        } else if (discount.condition === 'early_bird' && discount.earlyBirdDate) {
+                            condition = {
+                                type: 'datetime_before',
+                                field: 'register_date',
+                                value: new Date(discount.earlyBirdDate).toISOString()
+                            };
+                        }
+
+                        // 決定套用目標
+                        let applyTo = ['registration_fee'];
+                        if (discount.applyTo === 'total') {
+                            applyTo = ['total'];
+                        } else if (discount.applyTo === 'addon:*') {
+                            applyTo = ['addon:*'];
+                        } else if (discount.applyTo === 'custom' && discount.applyToCustom && discount.applyToCustom.length) {
+                            applyTo = discount.applyToCustom;
+                        } else if (discount.applyTo === 'registration_fee') {
+                            applyTo = ['registration_fee'];
+                        }
+
+                        const rule = {
+                            id: `discount_${idx}`,
+                            priority: priority++,
+                            description: discount.name,
+                            condition: condition,
+                            action: {
+                                type: discount.type === 'percentage' ? 'percentage_discount' : 'fixed_discount',
+                                value: discount.value,
+                                apply_to: applyTo,
+                                label: discount.name
+                            }
+                        };
+
+                        // 加入互斥優惠註記（用於驗證規則）
+                        if (discount.hasExclusion && discount.excludedDiscounts && discount.excludedDiscounts.length) {
+                            rule.excludes = discount.excludedDiscounts;
+                        }
+
+                        dsl.pricing_rules.push(rule);
+                    });
+
+                    // 生成表單欄位
+                    dsl.form_schema.fields.push(
+                        {
+                            id: 'name',
+                            label: '姓名',
+                            type: 'text',
+                            field: 'user.name',
+                            required: true
+                        },
+                        {
+                            id: 'email',
+                            label: 'Email',
+                            type: 'email',
+                            field: 'user.email',
+                            required: true
+                        }
+                    );
+
+                    // 賽事組別選單
+                    if (this.raceTypes.length) {
+                        dsl.form_schema.fields.push({
+                            id: 'race_type',
+                            label: '賽事組別',
+                            type: 'select',
+                            field: 'user.race_type',
+                            required: true,
+                            options: [
+                                { label: '請選擇組別', value: '' },
+                                ...this.raceTypes.map(r => ({
+                                    label: `${r.name} - NT$${r.price}`,
+                                    value: r.id
+                                }))
+                            ]
+                        });
+                    }
+
+                    // 團體人數
+                    if (this.shippingRules.length) {
+                        dsl.form_schema.fields.push({
+                            id: 'team_size',
+                            label: '團體報名人數',
+                            type: 'number',
+                            field: 'team_size',
+                            default_value: 1,
+                            min: 1
+                        });
+                    }
+
+                    // 加購項目
+                    this.addons.forEach(addon => {
+                        dsl.form_schema.fields.push({
+                            id: addon.id,
+                            label: addon.name,
+                            type: 'checkbox',
+                            field: `addons.${addon.id}`,
+                            default_value: false
+                        });
+
+                        if (addon.priceType !== 'per_person') {
+                            dsl.form_schema.fields.push({
+                                id: `${addon.id}_quantity`,
+                                label: `${addon.name}數量`,
+                                type: 'number',
+                                field: `addons.${addon.id}_quantity`,
+                                default_value: 1,
+                                min: 1
+                            });
+                        }
+                    });
+
+                    // 報名時間驗證
+                    if (this.eventData.registration_start && this.eventData.registration_end) {
+                        dsl.validation_rules.push({
+                            id: 'registration_period',
+                            description: '報名時間限制',
+                            condition: {
+                                type: 'not',
+                                condition: {
+                                    type: 'datetime_between',
+                                    field: 'register_date',
+                                    start: new Date(this.eventData.registration_start).toISOString(),
+                                    end: new Date(this.eventData.registration_end).toISOString()
+                                }
+                            },
+                            error_type: 'blocking',
+                            error_message: '目前不在報名時間內'
+                        });
+                    }
+
+                    return dsl;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

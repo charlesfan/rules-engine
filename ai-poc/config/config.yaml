@@ -1,0 +1,39 @@
+# DSL Chatbot Configuration
+
+# LLM Provider Settings
+llm:
+  # Default provider: "ollama" or "claude"
+  default_provider: "ollama"
+
+  # Ollama configuration
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "llama3.1:8b"
+    timeout: 120  # seconds
+
+  # Claude configuration
+  claude:
+    # API key can be set via environment variable ANTHROPIC_API_KEY
+    api_key: "${ANTHROPIC_API_KEY}"
+    model: "claude-sonnet-4-20250514"
+    timeout: 120  # seconds
+
+# Embedding Settings (Phase 1)
+embedding:
+  provider: "ollama"
+  model: "nomic-embed-text"
+  base_url: "http://localhost:11434"
+
+# Database Settings (Phase 1)
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "${DB_PASSWORD}"
+  database: "dsl_chatbot"
+  sslmode: "disable"
+
+# Application Settings
+app:
+  debug: true
+  log_level: "info"

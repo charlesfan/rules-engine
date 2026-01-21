@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rules Engine 編輯器</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        #app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
+        .example-list {
+            list-style: none;
+        }
+
+        .example-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #34495e;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .example-item:hover {
+            background: #415a77;
+        }
+
+        .example-item h3 {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .example-item p {
+            font-size: 12px;
+            color: #bdc3c7;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 15px 30px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #2c3e50;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .editor-panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .editor-panel h2 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .json-editor {
+            width: 100%;
+            min-height: 600px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            background: #282c34;
+            color: #abb2bf;
+        }
+
+        .preview-panel {
+            flex: 1;
+            padding: 20px;
+            background: #fafafa;
+            border-left: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        .validation-result {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .validation-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .validation-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .rule-tree {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .rule-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-left: 3px solid #3498db;
+            border-radius: 2px;
+        }
+
+        .rule-item h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .rule-item p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-pricing {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-validation {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="sidebar">
+            <h2>範例規則</h2>
+            <ul class="example-list">
+                <li v-for="example in examples" :key="example.name"
+                    class="example-item"
+                    @click="loadExample(example)">
+                    <h3>{{`{{ example.name }}`}}</h3>
+                    <p>{{`{{ example.description }}`}}</p>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>Rules Engine 編輯器</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" @click="validateRules">驗證規則</button>
+                    <button class="btn btn-success" @click="openPreview">預覽報名頁面</button>
+                </div>
+            </div>
+
+            <div class="editor-container">
+                <div class="editor-panel">
+                    <h2>規則 JSON 編輯器</h2>
+                    <textarea v-model="ruleJSON" class="json-editor"></textarea>
+                </div>
+
+                <div class="preview-panel">
+                    <h2>驗證結果</h2>
+
+                    <div v-if="validationResult" class="validation-result"
+                         :class="validationResult.valid ? 'validation-success' : 'validation-error'">
+                        <strong v-if="validationResult.valid">✓ 規則有效</strong>
+                        <strong v-else>✗ 規則無效</strong>
+                        <p v-if="validationResult.error">{{ validationResult.error }}</p>
+                    </div>
+
+                    <div v-if="parsedRuleSet" class="rule-tree">
+                        <h3 style="margin-bottom: 15px;">規則概覽</h3>
+
+                        <div v-if="parsedRuleSet.pricing_rules && parsedRuleSet.pricing_rules.length">
+                            <h4 style="color: #2c3e50; margin-bottom: 10px;">價格規則 ({{ parsedRuleSet.pricing_rules.length }})</h4>
+                            <div v-for="rule in parsedRuleSet.pricing_rules" :key="rule.id" class="rule-item">
+                                <h4>
+                                    {{ rule.id }}
+                                    <span class="status-badge status-pricing">優先級: {{ rule.priority }}</span>
+                                </h4>
+                                <p>{{ rule.description }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="parsedRuleSet.validation_rules && parsedRuleSet.validation_rules.length"
+                             style="margin-top: 20px;">
+                            <h4 style="color: #2c3e50; margin-bottom: 10px;">驗證規則 ({{ parsedRuleSet.validation_rules.length }})</h4>
+                            <div v-for="rule in parsedRuleSet.validation_rules" :key="rule.id" class="rule-item">
+                                <h4>
+                                    {{ rule.id }}
+                                    <span class="status-badge status-validation">{{ rule.error_type }}</span>
+                                </h4>
+                                <p>{{ rule.description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    ruleJSON: '',
+                    examples: [],
+                    validationResult: null,
+                    parsedRuleSet: null
+                };
+            },
+            mounted() {
+                this.loadExamples();
+            },
+            methods: {
+                async loadExamples() {
+                    try {
+                        const response = await axios.get('/api/rules/examples');
+                        this.examples = response.data;
+
+                        // 預設載入第一個範例
+                        if (this.examples.length > 0) {
+                            this.loadExample(this.examples[0]);
+                        }
+                    } catch (error) {
+                        console.error('Failed to load examples:', error);
+                    }
+                },
+                loadExample(example) {
+                    this.ruleJSON = JSON.stringify(example.rule_set, null, 2);
+                    this.validateRules();
+                },
+                async validateRules() {
+                    try {
+                        const ruleSet = JSON.parse(this.ruleJSON);
+                        const response = await axios.post('/api/rules/validate', ruleSet);
+
+                        this.validationResult = response.data;
+                        if (response.data.valid) {
+                            this.parsedRuleSet = response.data.rule_set;
+                        }
+                    } catch (error) {
+                        this.validationResult = {
+                            valid: false,
+                            error: error.response?.data?.error || error.message || 'JSON 格式錯誤'
+                        };
+                        this.parsedRuleSet = null;
+                    }
+                },
+                openPreview() {
+                    try {
+                        const ruleSet = JSON.parse(this.ruleJSON);
+                        // 儲存到 localStorage 供預覽頁面使用
+                        localStorage.setItem('preview_rules', this.ruleJSON);
+                        window.open('/preview', '_blank');
+                    } catch (error) {
+                        alert('請先確保規則 JSON 格式正確');
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

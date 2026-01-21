@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>活動報名預覽</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .panel h2 {
+            font-size: 20px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-primary:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .order-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-item .label {
+            color: #666;
+        }
+
+        .order-item .value {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .discount-item {
+            color: #27ae60;
+            font-size: 14px;
+        }
+
+        .order-total {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            text-align: right;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <div class="header">
+                <h1>{{ eventName }}</h1>
+                <p v-if="eventDescription">{{ eventDescription }}</p>
+            </div>
+
+            <div class="content">
+                <!-- 報名表單 -->
+                <div class="panel">
+                    <h2>報名資訊</h2>
+
+                    <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" v-model="form.user.name" @input="calculatePrice" placeholder="請輸入姓名">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" v-model="form.user.email" @input="calculatePrice" placeholder="請輸入 Email">
+                    </div>
+
+                    <div class="form-group">
+                        <label>手機</label>
+                        <input type="text" v-model="form.user.phone" @input="calculatePrice" placeholder="請輸入手機">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <input type="checkbox" id="isTeam" v-model="form.isTeam" @change="toggleTeam">
+                        <label for="isTeam">團體報名</label>
+                    </div>
+
+                    <div v-if="form.isTeam">
+                        <div class="form-group">
+                            <label>團隊人數</label>
+                            <input type="number" v-model.number="form.teamSize" @input="calculatePrice" min="1" max="10">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <button class="btn btn-primary" @click="submitRegistration" :disabled="!canSubmit">
+                            {{ calculating ? '計算中...' : '確認報名' }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 訂單摘要 -->
+                <div class="panel">
+                    <h2>訂單摘要</h2>
+
+                    <div v-if="evaluationResult">
+                        <!-- 驗證錯誤 -->
+                        <div v-if="evaluationResult.errors && evaluationResult.errors.length" class="alert alert-error">
+                            <strong>無法報名</strong>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                <li v-for="error in evaluationResult.errors" :key="error.rule_id">
+                                    {{ error.message }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 驗證警告 -->
+                        <div v-if="evaluationResult.warnings && evaluationResult.warnings.length" class="alert alert-warning">
+                            <strong>注意事項</strong>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                <li v-for="warning in evaluationResult.warnings" :key="warning.rule_id">
+                                    {{ warning.message }}
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 價格明細 -->
+                        <div v-if="evaluationResult.price" class="order-summary">
+                            <!-- 顯示所有項目 -->
+                            <div v-for="(item, itemId) in evaluationResult.price.items" :key="itemId" class="order-item">
+                                <span class="label">
+                                    {{ item.name }}
+                                    <span v-if="item.quantity > 1" style="font-size: 12px; color: #999;">
+                                        (x{{ item.quantity }})
+                                    </span>
+                                </span>
+                                <span class="value">
+                                    <span v-if="item.discounted_price < item.original_price" style="text-decoration: line-through; color: #999; margin-right: 8px;">
+                                        NT$ {{ item.original_price.toFixed(0) }}
+                                    </span>
+                                    NT$ {{ item.final_price.toFixed(0) }}
+                                </span>
+                            </div>
+
+                            <!-- 折扣 -->
+                            <div v-if="evaluationResult.price.discounts && evaluationResult.price.discounts.length">
+                                <div v-for="discount in evaluationResult.price.discounts" :key="discount.rule_id"
+                                     class="order-item discount-item">
+                                    <span class="label">{{ discount.label }}</span>
+                                    <span class="value">- NT$ {{ discount.amount.toFixed(0) }}</span>
+                                </div>
+                            </div>
+
+                            <div class="order-total">
+                                總計：NT$ {{ evaluationResult.price.final_price.toFixed(0) }}
+                            </div>
+                        </div>
+
+                        <!-- 套用的規則 -->
+                        <div v-if="evaluationResult.applied_rules && evaluationResult.applied_rules.length"
+                             style="margin-top: 20px;">
+                            <h3 style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                                已套用的規則 ({{ evaluationResult.applied_rules.length }})
+                            </h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <span v-for="ruleId in evaluationResult.applied_rules" :key="ruleId"
+                                      class="badge badge-success">
+                                    {{ ruleId }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 驗證狀態 -->
+                        <div style="margin-top: 20px; text-align: center;">
+                            <span v-if="evaluationResult.valid" class="badge badge-success" style="font-size: 14px; padding: 8px 16px;">
+                                ✓ 可以報名
+                            </span>
+                            <span v-else class="badge badge-error" style="font-size: 14px; padding: 8px 16px;">
+                                ✗ 無法報名
+                            </span>
+                        </div>
+                    </div>
+
+                    <div v-else class="loading">
+                        請填寫報名資訊以查看價格
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    ruleSet: null,
+                    eventName: '載入中...',
+                    eventDescription: '',
+                    form: {
+                        user: {
+                            name: '',
+                            email: '',
+                            phone: ''
+                        },
+                        isTeam: false,
+                        teamSize: 1
+                    },
+                    evaluationResult: null,
+                    calculating: false
+                };
+            },
+            computed: {
+                canSubmit() {
+                    return this.evaluationResult && this.evaluationResult.valid && !this.calculating;
+                }
+            },
+            mounted() {
+                this.loadRules();
+            },
+            methods: {
+                loadRules() {
+                    try {
+                        const rulesJSON = localStorage.getItem('preview_rules');
+                        if (!rulesJSON) {
+                            alert('找不到規則資料，請先在編輯器中點擊「預覽報名頁面」');
+                            return;
+                        }
+
+                        this.ruleSet = JSON.parse(rulesJSON);
+                        this.eventName = this.ruleSet.name || '活動報名';
+                        this.eventDescription = `活動編號：${this.ruleSet.event_id}`;
+
+                        // 自動計算價格
+                        this.calculatePrice();
+                    } catch (error) {
+                        console.error('Failed to load rules:', error);
+                        alert('載入規則失敗：' + error.message);
+                    }
+                },
+                toggleTeam() {
+                    if (!this.form.isTeam) {
+                        this.form.teamSize = 1;
+                    } else {
+                        this.form.teamSize = 3;
+                    }
+                    this.calculatePrice();
+                },
+                async calculatePrice() {
+                    if (!this.ruleSet) return;
+
+                    this.calculating = true;
+
+                    try {
+                        // 建立上下文
+                        const context = {
+                            register_date: new Date().toISOString(),
+                            user: this.form.user,
+                            team_size: this.form.isTeam ? this.form.teamSize : 1
+                        };
+
+                        if (this.form.isTeam) {
+                            context.team = {
+                                size: this.form.teamSize
+                            };
+                        }
+
+                        // 呼叫評估 API
+                        const response = await axios.post('/api/rules/evaluate', {
+                            rule_set: this.ruleSet,
+                            context: context
+                        });
+
+                        this.evaluationResult = response.data;
+                    } catch (error) {
+                        console.error('Failed to evaluate rules:', error);
+                        alert('評估規則失敗：' + (error.response?.data?.error || error.message));
+                    } finally {
+                        this.calculating = false;
+                    }
+                },
+                submitRegistration() {
+                    if (!this.canSubmit) return;
+
+                    // 顯示假訂單
+                    alert(`報名成功！\n\n訂單編號：ORDER-${Date.now()}\n報名人：${this.form.user.name}\nEmail：${this.form.user.email}\n總金額：NT$ ${this.evaluationResult.price.final_price.toFixed(0)}`);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
