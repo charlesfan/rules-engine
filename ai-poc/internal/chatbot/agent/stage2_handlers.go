@@ -4,11 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/charlesfan/rules-engine/ai-poc/internal/chatbot/prompts"
 	"github.com/charlesfan/rules-engine/ai-poc/pkg/llm"
 )
+
+// pricePattern matches common price patterns in Chinese input
+// Examples: 100元, NT$500, $880, 1000 元, 1,000元
+var pricePattern = regexp.MustCompile(`(?i)(\d[\d,]*\s*元|NT\$?\s*\d[\d,]*|\$\s*\d[\d,]*|\d[\d,]*\s*塊)`)
 
 // handleGeneralChat handles general chat intent (Stage 2)
 func (a *Agent) handleGeneralChat(ctx context.Context, input string) (*Response, error) {
@@ -67,12 +72,13 @@ func (a *Agent) handleRuleOperation(ctx context.Context, input string, intent st
 	case IntentDeleteRule:
 		prompt = prompts.BuildDeleteRulePrompt(input, existingRules)
 	default: // IntentRuleInput
+		// Note: Don't pass conversationContext for rule_input to avoid LLM being influenced by history
 		prompt = prompts.BuildRulePrompt(
 			input,
 			a.state.String(),
 			a.getRuleCount(),
 			existingRules,
-			a.conversationContext,
+			"", // Empty conversation context - LLM should focus on current user input only
 		)
 	}
 

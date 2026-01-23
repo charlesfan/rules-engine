@@ -105,91 +105,6 @@ func newEmptyRuleSet(eventID, version, name string) *dsl.RuleSet {
 	}
 }
 
-// inferFormSchema automatically generates FormSchema from pricing rules
-// It extracts race types from conditions like {"type":"equals","field":"user.race_type","value":"21K"}
-func (a *Agent) inferFormSchema() {
-	// Collect unique race types from pricing rules
-	raceTypes := make(map[string]string) // value -> label
-
-	for _, rule := range a.ruleSet.PricingRules {
-		if rule.Condition == nil {
-			continue
-		}
-		a.extractRaceTypesFromCondition(rule.Condition, rule.Description, raceTypes)
-	}
-
-	// If no race types found, don't create FormSchema
-	if len(raceTypes) == 0 {
-		return
-	}
-
-	// Build FormSchema
-	var options []dsl.FormFieldOption
-	for value, label := range raceTypes {
-		options = append(options, dsl.FormFieldOption{
-			Label: label,
-			Value: value,
-		})
-	}
-
-	a.ruleSet.FormSchema = &dsl.FormSchema{
-		Fields: []dsl.FormField{
-			{
-				ID:       "race_type",
-				Label:    "報名組別",
-				Type:     "select",
-				Field:    "user.race_type",
-				Required: true,
-				Options:  options,
-			},
-		},
-	}
-}
-
-// extractRaceTypesFromCondition recursively extracts race types from condition expressions
-func (a *Agent) extractRaceTypesFromCondition(expr *dsl.Expression, description string, raceTypes map[string]string) {
-	if expr == nil {
-		return
-	}
-
-	// Check if this is a race_type equals condition
-	if expr.Type == "equals" && expr.Field == "user.race_type" {
-		if value, ok := expr.Value.(string); ok {
-			// Use description as label if available, otherwise use value
-			label := value
-			if description != "" {
-				// Try to extract a meaningful label from description
-				// e.g., "21K 報名費" -> "21K"
-				if strings.Contains(description, value) {
-					label = value
-				}
-			}
-			// Map common race type names
-			switch value {
-			case "21K":
-				label = "半程馬拉松 (21K)"
-			case "42K":
-				label = "全程馬拉松 (42K)"
-			case "10K":
-				label = "10K"
-			case "5K":
-				label = "5K"
-			}
-			raceTypes[value] = label
-		}
-	}
-
-	// Recursively check nested conditions
-	if expr.Conditions != nil {
-		for _, cond := range expr.Conditions {
-			a.extractRaceTypesFromCondition(cond, description, raceTypes)
-		}
-	}
-	if expr.Condition != nil {
-		a.extractRaceTypesFromCondition(expr.Condition, description, raceTypes)
-	}
-}
-
 // Response represents the agent's response to user input
 type Response struct {
 	Message     string          `json:"message"`
@@ -641,9 +556,6 @@ func (a *Agent) handleDSLRequest(ctx context.Context, response *Response) (*Resp
 		response.CanGenerate = false
 		return response, nil
 	}
-
-	// Infer FormSchema from pricing rules (extract race types, etc.)
-	a.inferFormSchema()
 
 	// Final validation
 	if err := a.parser.Validate(a.ruleSet); err != nil {

@@ -74,8 +74,8 @@ type Action struct {
 	Item          string      `json:"item,omitempty"`     // registration_fee, addon:tshirt, etc.
 	ApplyTo       []string    `json:"apply_to,omitempty"` // 折扣作用目標（可多個）
 	Value         interface{} `json:"value,omitempty"`
-	UnitPrice     interface{} `json:"unit_price,omitempty"`   // 支援數字或變數引用 (如 "$variables.price")
-	FixedPrice    interface{} `json:"fixed_price,omitempty"`  // 固定價格（不乘以數量），支援數字或變數引用
+	UnitPrice     interface{} `json:"unit_price,omitempty"`  // 支援數字或變數引用 (如 "$variables.price")
+	FixedPrice    interface{} `json:"fixed_price,omitempty"` // 固定價格（不乘以數量），支援數字或變數引用
 	QuantityField string      `json:"quantity_field,omitempty"`
 	Label         string      `json:"label,omitempty"`
 }

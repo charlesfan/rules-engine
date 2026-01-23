@@ -174,12 +174,12 @@ func TestSetPrice_WithVariables(t *testing.T) {
 // TestAddItem tests add_item action
 func TestAddItem(t *testing.T) {
 	tests := []struct {
-		name           string
-		action         *dsl.Action
-		teamSize       int
-		expectedPrice  float64
-		expectedQty    int
-		expectedUnit   float64
+		name          string
+		action        *dsl.Action
+		teamSize      int
+		expectedPrice float64
+		expectedQty   int
+		expectedUnit  float64
 	}{
 		{
 			name: "unit price * quantity",

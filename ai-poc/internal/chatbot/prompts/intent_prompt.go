@@ -5,12 +5,17 @@ package prompts
 const IntentPromptTemplate = `你是意圖分析助手。分析用戶輸入，判斷意圖類型。
 
 ## 意圖類型
-- rule_input: 描述新規則（報名費、折扣、限制、日期）
-- modify_rule: 修改現有規則
-- delete_rule: 刪除規則
-- dsl_request: 要求生成 DSL（「生成」「產生」「完成」「確認」）
+- rule_input: 創建活動、新增規則、描述規則（「創建」「增加」「新增」「加入」「設定」）
+- modify_rule: 修改「已存在」的規則（「改成」「調整」「更新」現有規則的數值）
+- delete_rule: 刪除規則（「刪除」「移除」）
+- dsl_request: 要求生成 DSL（「生成」「產生」「完成」「確認」「看一下」）
 - general_chat: 一般對話、問候、詢問
 - clarify_response: 回答問題、補充資訊
+
+## 判斷重點
+- 「創建活動 xxx」「建立活動」→ rule_input
+- 「增加 xxx 組別」「新增 xxx」→ rule_input
+- 「把 xxx 改成 yyy」「調整 xxx 為」→ modify_rule（只有明確說「改」「調整」現有的才是）
 
 ## 對話背景
 {{CONVERSATION_CONTEXT}}

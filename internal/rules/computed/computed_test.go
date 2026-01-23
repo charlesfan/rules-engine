@@ -39,10 +39,10 @@ func createTestBreakdown() *dsl.PriceBreakdown {
 // TestSumPrices tests sum_prices computation
 func TestSumPrices(t *testing.T) {
 	tests := []struct {
-		name          string
-		items         []string
-		breakdown     *dsl.PriceBreakdown
-		expectedSum   float64
+		name        string
+		items       []string
+		breakdown   *dsl.PriceBreakdown
+		expectedSum float64
 	}{
 		{
 			name:        "sum specific items",
@@ -75,8 +75,8 @@ func TestSumPrices(t *testing.T) {
 			expectedSum: 0,
 		},
 		{
-			name: "empty items in breakdown",
-			items:       []string{"registration_fee"},
+			name:  "empty items in breakdown",
+			items: []string{"registration_fee"},
 			breakdown: &dsl.PriceBreakdown{
 				Items: map[string]*dsl.PriceItem{},
 			},
@@ -138,8 +138,8 @@ func TestCountItems(t *testing.T) {
 			expectedCount: 0,
 		},
 		{
-			name: "empty items in breakdown",
-			items:         []string{"registration_fee"},
+			name:  "empty items in breakdown",
+			items: []string{"registration_fee"},
 			breakdown: &dsl.PriceBreakdown{
 				Items: map[string]*dsl.PriceItem{},
 			},
@@ -195,8 +195,8 @@ func TestItemPrice(t *testing.T) {
 			expectedPrice: 0,
 		},
 		{
-			name: "empty items in breakdown",
-			itemID:        "registration_fee",
+			name:   "empty items in breakdown",
+			itemID: "registration_fee",
 			breakdown: &dsl.PriceBreakdown{
 				Items: map[string]*dsl.PriceItem{},
 			},

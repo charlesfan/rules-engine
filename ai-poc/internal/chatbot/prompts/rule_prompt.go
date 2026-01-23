@@ -3,38 +3,33 @@ package prompts
 // RulePromptTemplate is the Stage 2 prompt for rule extraction (~3000 chars)
 const RulePromptTemplate = `你是賽事報名規則助手。分析用戶描述並轉換成結構化規則。
 
-# 對話背景
-{{CONVERSATION_CONTEXT}}
+# ⚠️ 核心規則（必須遵守）
+1. 只處理「用戶輸入」中明確提到的內容
+2. 用戶沒有說具體金額/數字 → rules 必須是空陣列 []
+3. 絕對不要自己編造規則、組別或金額！
 
 # DSL 結構
 
 ## Condition 類型
 - always_true: 總是成立
-- equals: {"type":"equals","field":"user.race_type","value":"21K"}
+- equals: {"type":"equals","field":"user.race_type","value":"xxx"}
 - compare: {"type":"compare","field":"team_size","operator":">=","value":5}
 - datetime_before: {"type":"datetime_before","field":"register_date","value":"2026-02-28T23:59:59+08:00"}
 - datetime_between: {"type":"datetime_between","field":"register_date","start":"...","end":"..."}
-- and: {"type":"and","conditions":[...]}
-- or: {"type":"or","conditions":[...]}
-- rule_ref: {"type":"rule_ref","rule":"is_early_bird"}
+- and/or: {"type":"and","conditions":[...]}
 
 ## Action 類型
-- set_price: {"type":"set_price","item":"registration_fee","value":1080,"label":"報名費"}
-- add_item: {"type":"add_item","item":"addon:insurance","unit_price":200,"quantity_field":"team_size","label":"保險"}
-- percentage_discount: {"type":"percentage_discount","value":15,"apply_to":["registration_fee"],"label":"早鳥優惠"}
-  ⚠️ value 是減少的百分比：9折=10, 85折=15, 8折=20
-- fixed_discount: {"type":"fixed_discount","value":100,"apply_to":["total"],"label":"優惠碼折抵"}
+- set_price: {"type":"set_price","item":"registration_fee","value":金額,"label":"描述"}
+- add_item: {"type":"add_item","item":"addon:xxx","unit_price":金額,"label":"描述"}
+- percentage_discount: {"type":"percentage_discount","value":折扣百分比,"apply_to":["registration_fee"],"label":"描述"}
+  （9折=10, 85折=15, 8折=20）
+- fixed_discount: {"type":"fixed_discount","value":金額,"apply_to":["total"],"label":"描述"}
 
 ## 常用欄位
-- user.race_type: 組別 (21K/10K/5K)
-- user.age: 年齡
-- team_size: 團隊人數
-- register_date: 報名日期
-- addons.insurance: 是否加購保險
+user.race_type（組別）、user.age（年齡）、team_size（團隊人數）、register_date（報名日期）
 
 ## 組別同義詞
-半馬/21K/半程馬拉松 → 21K
-全馬/42K/全程馬拉松 → 42K
+半馬=21K、全馬=42K
 
 # 目前狀態
 {{STATE}}
@@ -45,21 +40,18 @@ const RulePromptTemplate = `你是賽事報名規則助手。分析用戶描述�
 # 用戶輸入
 {{USER_INPUT}}
 
-# 輸出 JSON
-- event_name: 用戶提到活動名稱時設定
-- rules: 只有明確的規則才加入，沒有具體規則時為空陣列 []
-
-{"intent":"rule_input","event_name":"活動名稱（如有）","rules":[...],"questions":[],"can_generate":false,"message":"回覆訊息"}
+# 輸出格式
+{"intent":"rule_input","event_name":"活動名稱或空字串","rules":[只放用戶明確說的規則],"questions":[],"can_generate":布林值,"message":"回覆"}
 
 # 範例
 
-用戶: "創建一個叫做2026馬拉松的活動"
-輸出:
-{"intent":"rule_input","event_name":"2026馬拉松","rules":[],"questions":["請問這個活動有哪些報名組別和費用？"],"can_generate":false,"message":"已創建活動「2026馬拉松」。請描述報名規則，例如報名費、優惠等。"}
+## 範例1：只創建活動（沒有金額 → rules 必須空）
+用戶: "創建一個馬拉松活動"
+輸出: {"intent":"rule_input","event_name":"馬拉松活動","rules":[],"questions":[],"can_generate":false,"message":"已創建活動。請描述報名組別和費用。"}
 
-用戶: "21K 報名費 1080 元，10K 報名費 980 元"
-輸出:
-{"intent":"rule_input","rules":[{"id":"new_pricing_21k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1080,"label":"21K 報名費"}}},{"id":"new_pricing_10k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"10K 報名費","condition":{"type":"equals","field":"user.race_type","value":"10K"},"action":{"type":"set_price","item":"registration_fee","value":980,"label":"10K 報名費"}}}],"questions":[],"can_generate":true,"message":"已設定報名費：21K NT$1,080、10K NT$980。可繼續補充規則或輸入「生成 DSL」。"}`
+## 範例2：新增一個組別（有明確金額）
+用戶: "新增5K組，報名費500元"
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_5k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"5K 報名費","condition":{"type":"equals","field":"user.race_type","value":"5K"},"action":{"type":"set_price","item":"registration_fee","value":500,"label":"5K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 5K 組，報名費 NT$500。"}`
 
 // RulePromptForModify is the prompt for modifying existing rules
 const RulePromptForModify = `你是賽事報名規則助手。用戶要修改現有規則。

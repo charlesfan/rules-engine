@@ -195,7 +195,7 @@ func TestIntegration_EarlyBirdDiscount(t *testing.T) {
 		{
 			name:             "early bird (before deadline)",
 			registerDate:     time.Date(2025, 9, 15, 0, 0, 0, 0, time.UTC),
-			expectedPrice:    900,  // 1000 * 0.9
+			expectedPrice:    900, // 1000 * 0.9
 			expectedDiscount: 100,
 		},
 		{

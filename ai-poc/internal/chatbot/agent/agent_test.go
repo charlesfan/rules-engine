@@ -513,7 +513,7 @@ func TestParseLLMResponse_FlatRuleFormat(t *testing.T) {
 
 	rule := resp.Rules[0]
 	assert.Equal(t, "register_date_rule", rule.ID)
-	assert.Equal(t, "add", rule.Action) // Should be normalized to "add"
+	assert.Equal(t, "add", rule.Action)       // Should be normalized to "add"
 	assert.Equal(t, "pricing", rule.RuleType) // Should be inferred as pricing
 
 	// Verify data is properly structured
@@ -684,99 +684,4 @@ func TestAgent_DeleteRule(t *testing.T) {
 
 	assert.Len(t, agent.ruleSet.PricingRules, 1)
 	assert.Equal(t, "pricing_2", agent.ruleSet.PricingRules[0].ID)
-}
-
-func TestAgent_InferFormSchema(t *testing.T) {
-	agent := NewAgent(nil)
-
-	// Add pricing rules with race_type conditions
-	agent.ruleSet.PricingRules = append(agent.ruleSet.PricingRules,
-		&dsl.PricingRule{
-			ID:          "pricing_21k",
-			Description: "21K 報名費",
-			Condition:   &dsl.Expression{Type: "equals", Field: "user.race_type", Value: "21K"},
-			Action:      &dsl.Action{Type: "set_price", Item: "registration_fee", Value: 1080},
-		},
-		&dsl.PricingRule{
-			ID:          "pricing_10k",
-			Description: "10K 報名費",
-			Condition:   &dsl.Expression{Type: "equals", Field: "user.race_type", Value: "10K"},
-			Action:      &dsl.Action{Type: "set_price", Item: "registration_fee", Value: 880},
-		},
-	)
-
-	// Initially no FormSchema
-	assert.Nil(t, agent.ruleSet.FormSchema)
-
-	// Infer FormSchema
-	agent.inferFormSchema()
-
-	// Should have FormSchema now
-	require.NotNil(t, agent.ruleSet.FormSchema)
-	require.Len(t, agent.ruleSet.FormSchema.Fields, 1)
-
-	field := agent.ruleSet.FormSchema.Fields[0]
-	assert.Equal(t, "race_type", field.ID)
-	assert.Equal(t, "報名組別", field.Label)
-	assert.Equal(t, "select", field.Type)
-	assert.Equal(t, "user.race_type", field.Field)
-	assert.True(t, field.Required)
-	assert.Len(t, field.Options, 2)
-
-	// Check options contain both race types
-	optionValues := make(map[string]bool)
-	for _, opt := range field.Options {
-		optionValues[opt.Value.(string)] = true
-	}
-	assert.True(t, optionValues["21K"])
-	assert.True(t, optionValues["10K"])
-}
-
-func TestAgent_InferFormSchema_NoRaceTypes(t *testing.T) {
-	agent := NewAgent(nil)
-
-	// Add a rule without race_type condition
-	agent.ruleSet.PricingRules = append(agent.ruleSet.PricingRules,
-		&dsl.PricingRule{
-			ID:          "pricing_default",
-			Description: "預設報名費",
-			Condition:   &dsl.Expression{Type: "always_true"},
-			Action:      &dsl.Action{Type: "set_price", Item: "registration_fee", Value: 1000},
-		},
-	)
-
-	// Infer FormSchema
-	agent.inferFormSchema()
-
-	// Should NOT have FormSchema (no race types to infer)
-	assert.Nil(t, agent.ruleSet.FormSchema)
-}
-
-func TestAgent_InferFormSchema_NestedCondition(t *testing.T) {
-	agent := NewAgent(nil)
-
-	// Add a rule with nested AND condition
-	agent.ruleSet.PricingRules = append(agent.ruleSet.PricingRules,
-		&dsl.PricingRule{
-			ID:          "pricing_early_21k",
-			Description: "21K 早鳥優惠",
-			Condition: &dsl.Expression{
-				Type: "and",
-				Conditions: []*dsl.Expression{
-					{Type: "equals", Field: "user.race_type", Value: "21K"},
-					{Type: "datetime_before", Field: "register_date", Value: "2026-02-28T23:59:59+08:00"},
-				},
-			},
-			Action: &dsl.Action{Type: "percentage_discount", Value: 15},
-		},
-	)
-
-	// Infer FormSchema
-	agent.inferFormSchema()
-
-	// Should have FormSchema with 21K option (extracted from nested condition)
-	require.NotNil(t, agent.ruleSet.FormSchema)
-	require.Len(t, agent.ruleSet.FormSchema.Fields, 1)
-	require.Len(t, agent.ruleSet.FormSchema.Fields[0].Options, 1)
-	assert.Equal(t, "21K", agent.ruleSet.FormSchema.Fields[0].Options[0].Value)
 }

@@ -8,8 +8,9 @@ llm:
   # Ollama configuration
   ollama:
     base_url: "http://localhost:11434"
-    model: "llama3.1:8b"
-    timeout: 120  # seconds
+    # model: "llama3.1:8b"
+    model: "llama3.1:70b"
+    timeout: 6000  # seconds (increased for larger models like 70b)
 
   # Claude configuration
   claude:

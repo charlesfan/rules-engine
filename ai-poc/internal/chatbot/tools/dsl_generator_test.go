@@ -212,14 +212,14 @@ func TestExtractCodeBlock(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "json code block",
-			content: "Here is the DSL:\n```json\n{\"event_id\": \"test\"}\n```\nEnd.",
+			name:     "json code block",
+			content:  "Here is the DSL:\n```json\n{\"event_id\": \"test\"}\n```\nEnd.",
 			lang:     "json",
 			expected: `{"event_id": "test"}`,
 		},
 		{
-			name: "generic code block",
-			content: "Result:\n```\n{\"id\": \"123\"}\n```",
+			name:     "generic code block",
+			content:  "Result:\n```\n{\"id\": \"123\"}\n```",
 			lang:     "json",
 			expected: `{"id": "123"}`,
 		},
@@ -230,8 +230,8 @@ func TestExtractCodeBlock(t *testing.T) {
 			expected: "",
 		},
 		{
-			name: "multiple code blocks",
-			content: "First:\n```json\n{\"first\": true}\n```\nSecond:\n```json\n{\"second\": true}\n```",
+			name:     "multiple code blocks",
+			content:  "First:\n```json\n{\"first\": true}\n```\nSecond:\n```json\n{\"second\": true}\n```",
 			lang:     "json",
 			expected: `{"first": true}`,
 		},

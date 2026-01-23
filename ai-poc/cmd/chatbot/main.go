@@ -11,14 +11,22 @@ import (
 
 	"github.com/charlesfan/rules-engine/ai-poc/internal/chatbot/agent"
 	"github.com/charlesfan/rules-engine/ai-poc/internal/chatbot/conversation"
+	"github.com/charlesfan/rules-engine/ai-poc/pkg/config"
 	"github.com/charlesfan/rules-engine/ai-poc/pkg/llm"
 )
 
 func main() {
 	ctx := context.Background()
 
-	// Initialize LLM Manager with default providers
-	manager := llm.DefaultManager()
+	// Load configuration
+	cfg, err := config.LoadFromDefaultPaths()
+	if err != nil {
+		fmt.Printf("Warning: Failed to load config, using defaults: %v\n", err)
+		cfg = config.Default()
+	}
+
+	// Initialize LLM Manager from config
+	manager := llm.NewManagerFromConfig(cfg)
 
 	// Initialize Memory with compressor
 	memory := conversation.NewMemory()
@@ -335,8 +343,8 @@ func handleChat(ctx context.Context, manager *llm.Manager, memory *conversation.
 	// Show thinking indicator
 	fmt.Printf("🤔 思考中 (%s)...\n", provider.Name())
 
-	// Send request with timeout
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	// Send request with timeout from config
+	ctx, cancel := context.WithTimeout(ctx, manager.CurrentTimeout())
 	defer cancel()
 
 	start := time.Now()

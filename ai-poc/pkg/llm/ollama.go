@@ -21,7 +21,9 @@ type OllamaConfig struct {
 func DefaultOllamaConfig() OllamaConfig {
 	return OllamaConfig{
 		BaseURL: "http://localhost:11434",
-		Model:   "llama3.1:8b",
+		//Model:   "llama3.1:8b",
+		//Model:   "qwen2.5:32b",
+		Model:   "llama3.1:70b",
 		Timeout: 120,
 	}
 }

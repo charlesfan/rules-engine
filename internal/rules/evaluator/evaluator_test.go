@@ -643,13 +643,13 @@ func TestEvaluateExpression_FieldEmpty(t *testing.T) {
 	ctx := &dsl.Context{
 		RegisterDate: time.Now(),
 		User: map[string]interface{}{
-			"name":        "John",
+			"name":         "John",
 			"empty_string": "",
 			"nil_value":    nil,
 			"zero_number":  0,
 		},
 		Addons: map[string]interface{}{
-			"empty_array": []interface{}{},
+			"empty_array":  []interface{}{},
 			"filled_array": []interface{}{1, 2, 3},
 		},
 	}
@@ -1393,11 +1393,11 @@ func TestEvaluateExpression_RuleRef(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		ctx          *dsl.Context
-		ruleRef      string
-		expected     bool
-		shouldError  bool
+		name        string
+		ctx         *dsl.Context
+		ruleRef     string
+		expected    bool
+		shouldError bool
 	}{
 		{
 			name: "is_adult - true",

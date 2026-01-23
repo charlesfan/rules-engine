@@ -29,10 +29,10 @@ func NewDSLValidator() *DSLValidator {
 
 // ValidationResult contains the result of DSL validation
 type ValidationResult struct {
-	Valid    bool              `json:"valid"`
-	RuleSet  *dsl.RuleSet      `json:"rule_set,omitempty"`
-	Errors   []ValidationError `json:"errors,omitempty"`
-	Warnings []string          `json:"warnings,omitempty"`
+	Valid    bool               `json:"valid"`
+	RuleSet  *dsl.RuleSet       `json:"rule_set,omitempty"`
+	Errors   []ValidationError  `json:"errors,omitempty"`
+	Warnings []string           `json:"warnings,omitempty"`
 	Summary  *ValidationSummary `json:"summary,omitempty"`
 }
 

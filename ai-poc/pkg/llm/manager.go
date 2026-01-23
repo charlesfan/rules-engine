@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
+
+	"github.com/charlesfan/rules-engine/ai-poc/pkg/config"
 )
 
 // Manager manages multiple LLM providers and handles switching between them
 type Manager struct {
 	providers map[ProviderType]Provider
+	timeouts  map[ProviderType]time.Duration // timeout per provider
 	current   ProviderType
 	mu        sync.RWMutex
 }
@@ -17,15 +21,32 @@ type Manager struct {
 func NewManager() *Manager {
 	return &Manager{
 		providers: make(map[ProviderType]Provider),
+		timeouts:  make(map[ProviderType]time.Duration),
 		current:   ProviderOllama, // Default to Ollama
 	}
 }
 
 // Register adds a provider to the manager
 func (m *Manager) Register(providerType ProviderType, provider Provider) {
+	m.RegisterWithTimeout(providerType, provider, 2*time.Minute) // default 2 min
+}
+
+// RegisterWithTimeout adds a provider with specific timeout
+func (m *Manager) RegisterWithTimeout(providerType ProviderType, provider Provider, timeout time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.providers[providerType] = provider
+	m.timeouts[providerType] = timeout
+}
+
+// CurrentTimeout returns the timeout for the current provider
+func (m *Manager) CurrentTimeout() time.Duration {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if t, ok := m.timeouts[m.current]; ok {
+		return t
+	}
+	return 2 * time.Minute // fallback default
 }
 
 // Switch changes the current active provider
@@ -158,11 +179,60 @@ func (m *Manager) GetStatus(ctx context.Context) []ProviderStatus {
 func DefaultManager() *Manager {
 	m := NewManager()
 
+	ollamaConfig := DefaultOllamaConfig()
+	claudeConfig := DefaultClaudeConfig()
+
 	// Register Ollama with default config
-	m.Register(ProviderOllama, NewOllamaProvider(DefaultOllamaConfig()))
+	m.RegisterWithTimeout(ProviderOllama, NewOllamaProvider(ollamaConfig), time.Duration(ollamaConfig.Timeout)*time.Second)
 
 	// Register Claude with default config
-	m.Register(ProviderClaude, NewClaudeProvider(DefaultClaudeConfig()))
+	m.RegisterWithTimeout(ProviderClaude, NewClaudeProvider(claudeConfig), time.Duration(claudeConfig.Timeout)*time.Second)
+
+	return m
+}
+
+// NewManagerFromConfig creates a manager from configuration
+func NewManagerFromConfig(cfg *config.Config) *Manager {
+	m := NewManager()
+
+	// Set default provider
+	switch cfg.LLM.DefaultProvider {
+	case "claude":
+		m.current = ProviderClaude
+	default:
+		m.current = ProviderOllama
+	}
+
+	// Register Ollama
+	ollamaConfig := OllamaConfig{
+		BaseURL: cfg.LLM.Ollama.BaseURL,
+		Model:   cfg.LLM.Ollama.Model,
+		Timeout: cfg.LLM.Ollama.Timeout,
+	}
+	if ollamaConfig.BaseURL == "" {
+		ollamaConfig.BaseURL = "http://localhost:11434"
+	}
+	if ollamaConfig.Model == "" {
+		ollamaConfig.Model = "llama3.1:8b"
+	}
+	if ollamaConfig.Timeout == 0 {
+		ollamaConfig.Timeout = 120
+	}
+	m.RegisterWithTimeout(ProviderOllama, NewOllamaProvider(ollamaConfig), time.Duration(ollamaConfig.Timeout)*time.Second)
+
+	// Register Claude
+	claudeConfig := ClaudeConfig{
+		APIKey:  cfg.LLM.Claude.APIKey,
+		Model:   cfg.LLM.Claude.Model,
+		Timeout: cfg.LLM.Claude.Timeout,
+	}
+	if claudeConfig.Model == "" {
+		claudeConfig.Model = "claude-sonnet-4-20250514"
+	}
+	if claudeConfig.Timeout == 0 {
+		claudeConfig.Timeout = 120
+	}
+	m.RegisterWithTimeout(ProviderClaude, NewClaudeProvider(claudeConfig), time.Duration(claudeConfig.Timeout)*time.Second)
 
 	return m
 }

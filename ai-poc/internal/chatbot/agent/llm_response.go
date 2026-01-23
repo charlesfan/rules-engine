@@ -23,7 +23,7 @@ type LLMResponse struct {
 // LLMRule represents a rule extracted by LLM
 type LLMRule struct {
 	ID       string          `json:"id"`
-	Action   string          `json:"action"` // add, update, delete
+	Action   string          `json:"action"`    // add, update, delete
 	RuleType string          `json:"rule_type"` // pricing, validation
 	Data     json.RawMessage `json:"data"`
 }
@@ -46,8 +46,8 @@ type LLMValidationRuleData struct {
 
 // LLMRuleDefinition represents a rule definition
 type LLMRuleDefinition struct {
-	Action string                    `json:"action"` // add, update, delete
-	Data   LLMRuleDefinitionData     `json:"data"`
+	Action string                `json:"action"` // add, update, delete
+	Data   LLMRuleDefinitionData `json:"data"`
 }
 
 // LLMRuleDefinitionData represents rule definition data
@@ -94,15 +94,15 @@ const (
 
 // rawLLMRule is a flexible structure to handle different LLM output formats
 type rawLLMRule struct {
-	ID          string          `json:"id"`
-	Action      json.RawMessage `json:"action"`      // Could be string or object
-	RuleType    string          `json:"rule_type"`
-	Data        json.RawMessage `json:"data"`
-	Condition   json.RawMessage `json:"condition"`   // Flat format
-	Priority    *int            `json:"priority"`    // Flat format
-	Description string          `json:"description"` // Flat format
-	ErrorType   string          `json:"error_type"`  // Flat format (validation)
-	ErrorMessage string         `json:"error_message"` // Flat format (validation)
+	ID           string          `json:"id"`
+	Action       json.RawMessage `json:"action"` // Could be string or object
+	RuleType     string          `json:"rule_type"`
+	Data         json.RawMessage `json:"data"`
+	Condition    json.RawMessage `json:"condition"`     // Flat format
+	Priority     *int            `json:"priority"`      // Flat format
+	Description  string          `json:"description"`   // Flat format
+	ErrorType    string          `json:"error_type"`    // Flat format (validation)
+	ErrorMessage string          `json:"error_message"` // Flat format (validation)
 }
 
 // rawLLMResponse is a flexible structure to handle different LLM output formats
