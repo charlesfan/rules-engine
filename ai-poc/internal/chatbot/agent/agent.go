@@ -304,12 +304,35 @@ func (a *Agent) applyRuleOperation(rule LLMRule) error {
 		Action       json.RawMessage `json:"action"`
 		ErrorType    string          `json:"error_type"`
 		ErrorMessage string          `json:"error_message"`
+		// Partial update fields (LLM might return these directly)
+		Price int `json:"price"`
+		Value int `json:"value"`
 	}
 	if err := json.Unmarshal(rule.Data, &data); err != nil {
 		return fmt.Errorf("invalid rule data: %w", err)
 	}
 
-	// Skip incomplete rules (empty or null condition)
+	// For update action with incomplete data, try to merge with existing rule
+	isIncomplete := len(data.Condition) == 0 || string(data.Condition) == "{}" || string(data.Condition) == "null"
+	if rule.Action == ActionUpdate && isIncomplete && rule.ID != "" {
+		// Try to merge with existing rule
+		mergedData, ruleType, err := a.mergeWithExistingRule(rule.ID, data)
+		if err != nil {
+			fmt.Printf("[DEBUG] Failed to merge partial update: %v\n", err)
+			return nil // Skip silently
+		}
+		// Update rule with merged data
+		rule.Data = mergedData
+		if rule.RuleType == "" {
+			rule.RuleType = ruleType
+		}
+		// Re-parse merged data
+		if err := json.Unmarshal(rule.Data, &data); err != nil {
+			return fmt.Errorf("invalid merged rule data: %w", err)
+		}
+	}
+
+	// Skip incomplete rules (empty or null condition) for non-update actions
 	if len(data.Condition) == 0 || string(data.Condition) == "{}" || string(data.Condition) == "null" {
 		return nil // Skip silently - rule is incomplete
 	}
@@ -349,6 +372,120 @@ func (a *Agent) applyRuleOperation(rule LLMRule) error {
 	}
 
 	return nil
+}
+
+// mergeWithExistingRule merges partial update data with existing rule
+func (a *Agent) mergeWithExistingRule(ruleID string, partialData struct {
+	Priority     int             `json:"priority"`
+	Description  string          `json:"description"`
+	Condition    json.RawMessage `json:"condition"`
+	Action       json.RawMessage `json:"action"`
+	ErrorType    string          `json:"error_type"`
+	ErrorMessage string          `json:"error_message"`
+	Price        int             `json:"price"`
+	Value        int             `json:"value"`
+}) (json.RawMessage, string, error) {
+	// Find existing rule by ID
+	for _, rule := range a.ruleSet.PricingRules {
+		if rule.ID == ruleID {
+			// Found pricing rule, merge with partial data
+			mergedData := map[string]interface{}{
+				"priority":    rule.Priority,
+				"description": rule.Description,
+			}
+
+			// Marshal existing condition
+			if rule.Condition != nil {
+				condBytes, _ := json.Marshal(rule.Condition)
+				var cond map[string]interface{}
+				json.Unmarshal(condBytes, &cond)
+				mergedData["condition"] = cond
+			}
+
+			// Marshal existing action and update price if provided
+			if rule.Action != nil {
+				actionBytes, _ := json.Marshal(rule.Action)
+				var action map[string]interface{}
+				json.Unmarshal(actionBytes, &action)
+
+				// Check if partial data has new price
+				newPrice := partialData.Price
+				if newPrice == 0 {
+					newPrice = partialData.Value
+				}
+				if newPrice > 0 {
+					action["value"] = newPrice
+					// Update label if it contains price
+					if label, ok := action["label"].(string); ok {
+						// Keep the label as is, or we could update it
+						_ = label
+					}
+				}
+				mergedData["action"] = action
+			}
+
+			// Override with any provided fields
+			if partialData.Priority != 0 {
+				mergedData["priority"] = partialData.Priority
+			}
+			if partialData.Description != "" {
+				mergedData["description"] = partialData.Description
+			}
+			if len(partialData.Condition) > 0 && string(partialData.Condition) != "{}" && string(partialData.Condition) != "null" {
+				var cond map[string]interface{}
+				json.Unmarshal(partialData.Condition, &cond)
+				mergedData["condition"] = cond
+			}
+			if len(partialData.Action) > 0 && string(partialData.Action) != "{}" && string(partialData.Action) != "null" {
+				var action map[string]interface{}
+				json.Unmarshal(partialData.Action, &action)
+				mergedData["action"] = action
+			}
+
+			result, _ := json.Marshal(mergedData)
+			fmt.Printf("[DEBUG] Merged rule data: %s\n", string(result))
+			return result, RuleTypePricingLLM, nil
+		}
+	}
+
+	// Check validation rules
+	for _, rule := range a.ruleSet.ValidationRules {
+		if rule.ID == ruleID {
+			mergedData := map[string]interface{}{
+				"description":   rule.Description,
+				"error_type":    rule.ErrorType,
+				"error_message": rule.ErrorMessage,
+			}
+
+			if rule.Condition != nil {
+				condBytes, _ := json.Marshal(rule.Condition)
+				var cond map[string]interface{}
+				json.Unmarshal(condBytes, &cond)
+				mergedData["condition"] = cond
+			}
+
+			// Override with provided fields
+			if partialData.Description != "" {
+				mergedData["description"] = partialData.Description
+			}
+			if partialData.ErrorType != "" {
+				mergedData["error_type"] = partialData.ErrorType
+			}
+			if partialData.ErrorMessage != "" {
+				mergedData["error_message"] = partialData.ErrorMessage
+			}
+			if len(partialData.Condition) > 0 && string(partialData.Condition) != "{}" {
+				var cond map[string]interface{}
+				json.Unmarshal(partialData.Condition, &cond)
+				mergedData["condition"] = cond
+			}
+
+			result, _ := json.Marshal(mergedData)
+			return result, RuleTypeValidationLLM, nil
+		}
+	}
+
+	return nil, "", fmt.Errorf("rule not found: %s", ruleID)
 }
 
 // normalizeRuleType normalizes rule_type from LLM output
@@ -393,6 +530,8 @@ func (a *Agent) addRule(id, ruleType string, data struct {
 	Action       json.RawMessage `json:"action"`
 	ErrorType    string          `json:"error_type"`
 	ErrorMessage string          `json:"error_message"`
+	Price        int             `json:"price"`
+	Value        int             `json:"value"`
 }, condition *dsl.Expression) error {
 
 	if ruleType == RuleTypePricingLLM {
@@ -429,6 +568,8 @@ func (a *Agent) updateRule(id, ruleType string, data struct {
 	Action       json.RawMessage `json:"action"`
 	ErrorType    string          `json:"error_type"`
 	ErrorMessage string          `json:"error_message"`
+	Price        int             `json:"price"`
+	Value        int             `json:"value"`
 }, condition *dsl.Expression) error {
 
 	if ruleType == RuleTypePricingLLM {
@@ -551,7 +692,8 @@ func (a *Agent) updateState(resp *LLMResponse) {
 
 // handleDSLRequest generates DSL from RuleSet
 func (a *Agent) handleDSLRequest(ctx context.Context, response *Response) (*Response, error) {
-	if a.getRuleCount() == 0 {
+	// Allow generating empty DSL if event name is set
+	if a.getRuleCount() == 0 && a.ruleSet.Name == "" {
 		response.Message = "目前沒有規則可以生成 DSL。請先描述您的賽事規則。"
 		response.CanGenerate = false
 		return response, nil
@@ -612,6 +754,12 @@ func (a *Agent) handleDSLRequest(ctx context.Context, response *Response) (*Resp
 
 // buildExistingRulesContext builds a text representation of existing rules for the prompt
 func (a *Agent) buildExistingRulesContext() string {
+	return a.buildExistingRulesContextDetailed(false)
+}
+
+// buildExistingRulesContextDetailed builds a detailed representation of existing rules
+// When detailed=true, includes full JSON structure for each rule (used for modify operations)
+func (a *Agent) buildExistingRulesContextDetailed(detailed bool) string {
 	if a.getRuleCount() == 0 {
 		return ""
 	}
@@ -621,13 +769,44 @@ func (a *Agent) buildExistingRulesContext() string {
 
 	// Pricing rules
 	for _, rule := range a.ruleSet.PricingRules {
-		sb.WriteString(fmt.Sprintf("%d. [pricing] id=%s: %s\n", i, rule.ID, rule.Description))
+		if detailed {
+			// Output full JSON for modify operations
+			ruleData := map[string]interface{}{
+				"id":        rule.ID,
+				"rule_type": "pricing",
+				"data": map[string]interface{}{
+					"priority":    rule.Priority,
+					"description": rule.Description,
+					"condition":   rule.Condition,
+					"action":      rule.Action,
+				},
+			}
+			jsonBytes, _ := json.Marshal(ruleData)
+			sb.WriteString(fmt.Sprintf("%d. %s\n", i, string(jsonBytes)))
+		} else {
+			sb.WriteString(fmt.Sprintf("%d. [pricing] id=%s: %s\n", i, rule.ID, rule.Description))
+		}
 		i++
 	}
 
 	// Validation rules
 	for _, rule := range a.ruleSet.ValidationRules {
-		sb.WriteString(fmt.Sprintf("%d. [validation] id=%s: %s\n", i, rule.ID, rule.Description))
+		if detailed {
+			ruleData := map[string]interface{}{
+				"id":        rule.ID,
+				"rule_type": "validation",
+				"data": map[string]interface{}{
+					"description":   rule.Description,
+					"condition":     rule.Condition,
+					"error_type":    rule.ErrorType,
+					"error_message": rule.ErrorMessage,
+				},
+			}
+			jsonBytes, _ := json.Marshal(ruleData)
+			sb.WriteString(fmt.Sprintf("%d. %s\n", i, string(jsonBytes)))
+		} else {
+			sb.WriteString(fmt.Sprintf("%d. [validation] id=%s: %s\n", i, rule.ID, rule.Description))
+		}
 		i++
 	}
 

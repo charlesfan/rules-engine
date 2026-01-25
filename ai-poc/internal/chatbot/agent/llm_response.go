@@ -2,7 +2,9 @@ package agent
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
+	"sync/atomic"
 )
 
 // LLMResponse represents the structured response from LLM
@@ -92,6 +94,18 @@ const (
 	RuleTypeValidationLLM = "validation"
 )
 
+// ruleIDCounter is used to generate unique rule IDs when LLM doesn't provide one
+var ruleIDCounter uint64
+
+// generateRuleID creates a unique rule ID based on rule type
+func generateRuleID(ruleType string) string {
+	counter := atomic.AddUint64(&ruleIDCounter, 1)
+	if ruleType == "" {
+		ruleType = RuleTypePricingLLM
+	}
+	return fmt.Sprintf("llm_%s_%d", ruleType, counter)
+}
+
 // rawLLMRule is a flexible structure to handle different LLM output formats
 type rawLLMRule struct {
 	ID           string          `json:"id"`
@@ -174,6 +188,11 @@ func normalizeRawRule(raw rawLLMRule) (*LLMRule, error) {
 	rule := &LLMRule{
 		ID:       raw.ID,
 		RuleType: raw.RuleType,
+	}
+
+	// Auto-generate ID if missing
+	if rule.ID == "" {
+		rule.ID = generateRuleID(rule.RuleType)
 	}
 
 	// Handle action field - could be string or object

@@ -64,15 +64,18 @@ func (a *Agent) handleGeneralChat(ctx context.Context, input string) (*Response,
 func (a *Agent) handleRuleOperation(ctx context.Context, input string, intent string) (*Response, error) {
 	// Build appropriate prompt based on intent
 	var prompt string
-	existingRules := a.buildExistingRulesContext()
 
 	switch intent {
 	case IntentModifyRule:
-		prompt = prompts.BuildModifyRulePrompt(input, existingRules)
+		// Use detailed context for modify operations so LLM knows exact rule structure
+		existingRulesDetailed := a.buildExistingRulesContextDetailed(true)
+		prompt = prompts.BuildModifyRulePrompt(input, existingRulesDetailed)
 	case IntentDeleteRule:
-		prompt = prompts.BuildDeleteRulePrompt(input, existingRules)
+		existingRulesDetailed := a.buildExistingRulesContextDetailed(true)
+		prompt = prompts.BuildDeleteRulePrompt(input, existingRulesDetailed)
 	default: // IntentRuleInput
 		// Note: Don't pass conversationContext for rule_input to avoid LLM being influenced by history
+		existingRules := a.buildExistingRulesContext()
 		prompt = prompts.BuildRulePrompt(
 			input,
 			a.state.String(),

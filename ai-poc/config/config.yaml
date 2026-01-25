@@ -9,7 +9,8 @@ llm:
   ollama:
     base_url: "http://localhost:11434"
     # model: "llama3.1:8b"
-    model: "llama3.1:70b"
+    # model: "llama3.1:70b"
+    model: "qwen2.5:32b"
     timeout: 6000  # seconds (increased for larger models like 70b)
 
   # Claude configuration

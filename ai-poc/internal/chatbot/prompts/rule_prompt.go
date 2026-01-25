@@ -28,8 +28,11 @@ const RulePromptTemplate = `你是賽事報名規則助手。分析用戶描述�
 ## 常用欄位
 user.race_type（組別）、user.age（年齡）、team_size（團隊人數）、register_date（報名日期）
 
-## 組別同義詞
-半馬=21K、全馬=42K
+## 組別標準值（race_type 的 value 必須使用以下格式）
+- 5K, 10K, 21K, 42K（不要用「路跑組」「半程馬拉松」等前綴）
+- 用戶說「路跑組 10K」→ value: "10K"
+- 用戶說「半馬」「半程馬拉松」「21K」→ value: "21K"
+- 用戶說「全馬」「全程馬拉松」「42K」→ value: "42K"
 
 # 目前狀態
 {{STATE}}
@@ -41,20 +44,51 @@ user.race_type（組別）、user.age（年齡）、team_size（團隊人數）�
 {{USER_INPUT}}
 
 # 輸出格式
-{"intent":"rule_input","event_name":"活動名稱或空字串","rules":[只放用戶明確說的規則],"questions":[],"can_generate":布林值,"message":"回覆"}
+⚠️ 重要：rules 陣列中每個規則必須嚴格遵守以下結構！
+{"intent":"rule_input","event_name":"活動名稱或空","rules":[規則物件],"questions":[],"can_generate":布林值,"message":"回覆"}
 
-# 範例
+## 規則物件結構（必須完全遵守）
+{
+  "id": "new_pricing_xxx",
+  "action": "add",
+  "rule_type": "pricing",
+  "data": {
+    "priority": 0,
+    "description": "描述文字",
+    "condition": {"type":"equals","field":"user.race_type","value":"組別"},
+    "action": {"type":"set_price","item":"registration_fee","value":金額,"label":"標籤"}
+  }
+}
+
+# 範例（請嚴格按照格式輸出）
 
 ## 範例1：只創建活動（沒有金額 → rules 必須空）
 用戶: "創建一個馬拉松活動"
 輸出: {"intent":"rule_input","event_name":"馬拉松活動","rules":[],"questions":[],"can_generate":false,"message":"已創建活動。請描述報名組別和費用。"}
 
-## 範例2：新增一個組別（有明確金額）
+## 範例2：新增 5K 組別
 用戶: "新增5K組，報名費500元"
-輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_5k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"5K 報名費","condition":{"type":"equals","field":"user.race_type","value":"5K"},"action":{"type":"set_price","item":"registration_fee","value":500,"label":"5K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 5K 組，報名費 NT$500。"}`
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_5k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"5K 報名費","condition":{"type":"equals","field":"user.race_type","value":"5K"},"action":{"type":"set_price","item":"registration_fee","value":500,"label":"5K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 5K 組，報名費 NT$500。"}
+
+## 範例3：新增 10K 組別
+用戶: "增加路跑組 10K，費用880元"
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_10k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"10K 報名費","condition":{"type":"equals","field":"user.race_type","value":"10K"},"action":{"type":"set_price","item":"registration_fee","value":880,"label":"10K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 10K 組，報名費 NT$880。"}
+
+## 範例4：新增 21K 組別
+用戶: "半馬報名費1080元"
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_21k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1080,"label":"21K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 21K 組，報名費 NT$1,080。"}`
 
 // RulePromptForModify is the prompt for modifying existing rules
 const RulePromptForModify = `你是賽事報名規則助手。用戶要修改現有規則。
+
+# ⚠️ 核心規則
+1. 修改規則用 action: "update"，必須保留原有 id
+2. data 必須包含完整結構（priority, description, condition, action）
+3. 只修改用戶指定的部分，其他保持原有值
+
+# 組別標準值
+- 5K, 10K, 21K, 42K（不要用「路跑組」「半馬」等）
+- 半馬=21K、全馬=42K
 
 # 已有規則
 {{EXISTING_RULES}}
@@ -62,12 +96,34 @@ const RulePromptForModify = `你是賽事報名規則助手。用戶要修改現
 # 用戶輸入
 {{USER_INPUT}}
 
-# 規則說明
-- 修改規則用 action: "update"，保留原有 id
-- 理解同義詞：半馬=21K、全馬=42K
+# 輸出格式
+⚠️ data 必須包含完整結構！
+{"intent":"modify_rule","rules":[規則物件],"questions":[],"can_generate":true,"message":"回覆"}
 
-# 輸出 JSON
-{"intent":"modify_rule","rules":[{"id":"原有id","action":"update","rule_type":"pricing|validation","data":{...}}],"questions":[],"can_generate":true,"message":"回覆訊息"}`
+## 規則物件結構（必須完全遵守）
+{
+  "id": "原有規則的id",
+  "action": "update",
+  "rule_type": "pricing",
+  "data": {
+    "priority": 原有priority,
+    "description": "更新後的描述",
+    "condition": {"type":"equals","field":"user.race_type","value":"組別"},
+    "action": {"type":"set_price","item":"registration_fee","value":新金額,"label":"標籤"}
+  }
+}
+
+# 範例
+
+## 範例1：修改 10K 報名費從 880 改為 780
+已有規則: {"id":"pricing_2","rule_type":"pricing","data":{"priority":0,"description":"10K 報名費","condition":{"type":"equals","field":"user.race_type","value":"10K"},"action":{"type":"set_price","item":"registration_fee","value":880,"label":"10K 報名費"}}}
+用戶: "10K 報名費改成 780"
+輸出: {"intent":"modify_rule","rules":[{"id":"pricing_2","action":"update","rule_type":"pricing","data":{"priority":0,"description":"10K 報名費","condition":{"type":"equals","field":"user.race_type","value":"10K"},"action":{"type":"set_price","item":"registration_fee","value":780,"label":"10K 報名費"}}}],"questions":[],"can_generate":true,"message":"已將 10K 報名費修改為 NT$780。"}
+
+## 範例2：修改 21K 報名費
+已有規則: {"id":"pricing_1","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1080,"label":"21K 報名費"}}}
+用戶: "半馬改成 1200"
+輸出: {"intent":"modify_rule","rules":[{"id":"pricing_1","action":"update","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1200,"label":"21K 報名費"}}}],"questions":[],"can_generate":true,"message":"已將 21K 報名費修改為 NT$1,200。"}`
 
 // RulePromptForDelete is the prompt for deleting rules
 const RulePromptForDelete = `你是賽事報名規則助手。用戶要刪除規則。
