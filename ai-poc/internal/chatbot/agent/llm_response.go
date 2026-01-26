@@ -127,7 +127,7 @@ type rawLLMResponse struct {
 	RuleDefinitions  map[string]LLMRuleDefinition `json:"rule_definitions,omitempty"`
 	Variables        map[string]LLMVariable       `json:"variables,omitempty"`
 	DiscountStacking *LLMDiscountStacking         `json:"discount_stacking,omitempty"`
-	Questions        []string                     `json:"questions,omitempty"`
+	Questions        json.RawMessage              `json:"questions,omitempty"` // Could be []string or []{"question": "..."}
 	CanGenerate      bool                         `json:"can_generate"`
 	Message          string                       `json:"message"`
 	Response         string                       `json:"response,omitempty"`
@@ -154,7 +154,7 @@ func ParseLLMResponse(content string) (*LLMResponse, error) {
 		RuleDefinitions:  rawResp.RuleDefinitions,
 		Variables:        rawResp.Variables,
 		DiscountStacking: rawResp.DiscountStacking,
-		Questions:        rawResp.Questions,
+		Questions:        normalizeQuestions(rawResp.Questions),
 		CanGenerate:      rawResp.CanGenerate,
 		Message:          rawResp.Message,
 		Response:         rawResp.Response,
@@ -358,6 +358,39 @@ func normalizeIntent(intent string) string {
 	default:
 		return intent
 	}
+}
+
+// normalizeQuestions handles different formats of questions from LLM
+// Supports: []string or [{"question": "..."}] or [{"text": "..."}]
+func normalizeQuestions(raw json.RawMessage) []string {
+	if len(raw) == 0 || string(raw) == "null" || string(raw) == "[]" {
+		return nil
+	}
+
+	// Try parsing as []string first
+	var strQuestions []string
+	if err := json.Unmarshal(raw, &strQuestions); err == nil {
+		return strQuestions
+	}
+
+	// Try parsing as array of objects with "question" field
+	var objQuestions []struct {
+		Question string `json:"question"`
+		Text     string `json:"text"`
+	}
+	if err := json.Unmarshal(raw, &objQuestions); err == nil {
+		result := make([]string, 0, len(objQuestions))
+		for _, q := range objQuestions {
+			if q.Question != "" {
+				result = append(result, q.Question)
+			} else if q.Text != "" {
+				result = append(result, q.Text)
+			}
+		}
+		return result
+	}
+
+	return nil
 }
 
 // ParseError represents a parsing error
