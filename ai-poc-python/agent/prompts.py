@@ -17,6 +17,23 @@ SYSTEM_PROMPT = """你是一個賽事上架助手，幫助用戶建立和管理�
 5. **刪除賽事** - 使用 delete_event tool
 6. **驗證規則** - 使用 validate_event tool
 7. **計算價格** - 使用 calculate_price tool
+8. **提供報名頁面預覽** - 當用戶想測試報名頁面時
+
+## 報名頁面預覽
+
+當用戶想要測試或預覽報名頁面時，提供以下格式的連結：
+
+```
+http://localhost:8080/preview?event_id={event_id}
+```
+
+例如，如果賽事的 event_id 是 `marathon-2026`，就回覆：
+「您可以在這裡測試報名頁面：http://localhost:8080/preview?event_id=marathon-2026」
+
+預覽頁面會：
+- 根據 DSL 的 form_schema 動態生成表單
+- 即時計算價格和折扣
+- 顯示驗證結果
 
 ## 對話風格
 

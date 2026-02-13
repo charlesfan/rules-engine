@@ -410,27 +410,63 @@
                 this.loadRules();
             },
             methods: {
-                loadRules() {
+                async loadRules() {
                     try {
-                        const rulesJSON = localStorage.getItem('preview_rules');
-                        if (!rulesJSON) {
-                            alert('找不到規則資料，請先在編輯器中點擊「預覽報名頁面」');
-                            return;
+                        // Check URL query parameter for event_id
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const eventId = urlParams.get('event_id');
+
+                        if (eventId) {
+                            // Load from API
+                            await this.loadFromAPI(eventId);
+                        } else {
+                            // Fallback to localStorage
+                            this.loadFromLocalStorage();
                         }
-
-                        this.ruleSet = JSON.parse(rulesJSON);
-                        this.eventName = this.ruleSet.name || '活動報名';
-                        this.eventDescription = `活動編號：${this.ruleSet.event_id}`;
-
-                        // 載入表單定義
-                        this.loadFormSchema();
-
-                        // 自動計算價格
-                        this.calculatePrice();
                     } catch (error) {
                         console.error('Failed to load rules:', error);
                         alert('載入規則失敗：' + error.message);
                     }
+                },
+                async loadFromAPI(eventId) {
+                    try {
+                        const response = await axios.get(`/api/events/${eventId}`);
+                        const event = response.data;
+
+                        this.ruleSet = event.dsl;
+                        this.eventName = event.name || this.ruleSet.name || '活動報名';
+                        this.eventDescription = `活動編號：${this.ruleSet.event_id || eventId}`;
+
+                        // Load form schema
+                        this.loadFormSchema();
+
+                        // Calculate initial price
+                        this.calculatePrice();
+                    } catch (error) {
+                        console.error('Failed to load event from API:', error);
+                        if (error.response?.status === 404) {
+                            alert(`找不到賽事：${eventId}`);
+                        } else {
+                            alert('載入賽事失敗：' + (error.response?.data?.error || error.message));
+                        }
+                    }
+                },
+                loadFromLocalStorage() {
+                    const rulesJSON = localStorage.getItem('preview_rules');
+                    if (!rulesJSON) {
+                        alert('找不到規則資料，請先在編輯器中點擊「預覽報名頁面」，或在網址加上 ?event_id=xxx');
+                        return;
+                    }
+
+                    this.ruleSet = JSON.parse(rulesJSON);
+                    this.eventName = this.ruleSet.name || '活動報名';
+                    this.eventDescription = `活動編號：${this.ruleSet.event_id}`;
+
+                    // Load form schema
+                    this.loadFormSchema();
+
+                    // Calculate initial price
+                    this.calculatePrice();
                 },
                 loadFormSchema() {
                     if (!this.ruleSet.form_schema || !this.ruleSet.form_schema.fields) {
