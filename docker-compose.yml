@@ -29,5 +29,20 @@ services:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/rules_engine?sslmode=disable
       SERVER_PORT: "8080"
 
+  streamlit:
+    build:
+      context: ./ai-poc-python
+      dockerfile: Dockerfile
+    container_name: rules-engine-streamlit
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    env_file:
+      - ./ai-poc-python/.env  # 從這裡讀取環境變數
+    environment:
+      # 覆蓋 .env 中的 GO_API_URL（Docker 內部網路）
+      GO_API_URL: http://api:8080
+
 volumes:
   postgres_data:

@@ -1,0 +1,20 @@
+# Web UI
+streamlit>=1.32.0
+
+# LangChain - AI Agent 框架
+langchain>=0.1.0
+langchain-anthropic>=0.1.0    # Claude API 整合
+langchain-community>=0.0.20   # 社群工具（如 Web Search）
+
+# HTTP Client
+httpx>=0.27.0                 # 現代化的 async HTTP client，比 requests 更好
+
+# Environment Variables
+python-dotenv>=1.0.0          # 讀取 .env 檔案
+
+# RAG (Phase 3)
+# chromadb>=0.4.0
+# langchain-chroma>=0.1.0
+
+# Type Hints (開發用)
+pydantic>=2.0.0               # 資料驗證與序列化
