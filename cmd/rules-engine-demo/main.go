@@ -1,40 +1,65 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/charlesfan/rules-engine/internal/api"
+	"github.com/charlesfan/rules-engine/internal/config"
 	"github.com/charlesfan/rules-engine/internal/rules/dsl"
 	"github.com/charlesfan/rules-engine/internal/rules/evaluator"
 	"github.com/charlesfan/rules-engine/internal/rules/parser"
+	"github.com/charlesfan/rules-engine/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
+	// Load configuration
+	cfg := config.Load()
+
+	// Initialize database connection
+	ctx := context.Background()
+	eventStore, err := store.NewPostgresStore(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Printf("Warning: Failed to connect to database: %v", err)
+		log.Println("Running without database support. Events API will not be available.")
+		eventStore = nil
+	} else {
+		defer eventStore.Close()
+		log.Println("Connected to PostgreSQL database")
+	}
+
 	r := gin.Default()
 
-	// 靜態檔案
+	// Static files
 	r.Static("/static", "./cmd/rules-engine-demo/static")
 
-	// 首頁 - 視覺化規則建立器
+	// Home page - visual rule builder
 	r.GET("/", func(c *gin.Context) {
 		c.File("./cmd/rules-engine-demo/static/builder.html")
 	})
 
-	// JSON 編輯器
+	// JSON editor
 	r.GET("/editor", func(c *gin.Context) {
 		c.File("./cmd/rules-engine-demo/static/index.html")
 	})
 
-	// 預覽頁面 - 動態報名表單
+	// Preview page - dynamic registration form
 	r.GET("/preview", func(c *gin.Context) {
 		c.File("./cmd/rules-engine-demo/static/preview-dynamic.html")
 	})
 
-	// API: 驗證規則
+	// Register Events API routes (if database is available)
+	if eventStore != nil {
+		api.RegisterRoutes(r, eventStore)
+		log.Println("Events API registered at /api/events")
+	}
+
+	// API: Validate rules
 	r.POST("/api/rules/validate", func(c *gin.Context) {
 		var ruleSetData map[string]interface{}
 		if err := c.ShouldBindJSON(&ruleSetData); err != nil {
@@ -42,7 +67,7 @@ func main() {
 			return
 		}
 
-		// 轉回 JSON bytes
+		// Convert back to JSON bytes
 		data, _ := json.Marshal(ruleSetData)
 
 		p := parser.NewParser()
@@ -61,7 +86,7 @@ func main() {
 		})
 	})
 
-	// API: 評估規則（計算價格與驗證）
+	// API: Evaluate rules (calculate price and validate)
 	r.POST("/api/rules/evaluate", func(c *gin.Context) {
 		var req struct {
 			RuleSet map[string]interface{} `json:"rule_set"`
@@ -73,7 +98,7 @@ func main() {
 			return
 		}
 
-		// 解析規則集
+		// Parse rule set
 		data, _ := json.Marshal(req.RuleSet)
 		p := parser.NewParser()
 		ruleSet, err := p.Parse(data)
@@ -82,7 +107,7 @@ func main() {
 			return
 		}
 
-		// 評估
+		// Evaluate
 		ev := evaluator.NewEvaluator(ruleSet)
 		result, err := ev.Evaluate(req.Context)
 		if err != nil {
@@ -93,19 +118,19 @@ func main() {
 		c.JSON(http.StatusOK, result)
 	})
 
-	// API: 取得範例規則
+	// API: Get example rules
 	r.GET("/api/rules/examples", func(c *gin.Context) {
 		examples := getExampleRules()
 		c.JSON(http.StatusOK, examples)
 	})
 
-	log.Println("Server starting on http://localhost:8080")
-	if err := r.Run(":8080"); err != nil {
+	log.Printf("Server starting on http://localhost:%s", cfg.ServerPort)
+	if err := r.Run(":" + cfg.ServerPort); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// getExampleRules 取得範例規則
+// getExampleRules returns example rules
 func getExampleRules() []map[string]interface{} {
 	examples := []map[string]interface{}{
 		{
@@ -282,7 +307,7 @@ func getExampleRules() []map[string]interface{} {
 		},
 	}
 
-	// 嘗試載入大湖馬拉松範例
+	// Try to load dahoo marathon example
 	if data, err := os.ReadFile("./examples/dahoo-marathon-2026.json"); err == nil {
 		var ruleSet map[string]interface{}
 		if err := json.Unmarshal(data, &ruleSet); err == nil {
