@@ -18,7 +18,7 @@
 │  │                     │         │                         │   │
 │  │  • AI 對話建立賽事  │         │  • /        規則建立器   │   │
 │  │  • DSL CRUD 操作    │         │  • /editor  JSON 編輯   │   │
-│  │  • RAG 語法查詢     │         │  • /preview 表單預覽    │   │
+│  │  • RAG 意圖判斷     │         │  • /preview 表單預覽    │   │
 │  └──────────┬──────────┘         └────────────┬────────────┘   │
 │             │                                  │                │
 └─────────────┼──────────────────────────────────┼────────────────┘
@@ -29,7 +29,7 @@
 │                      Go API Server :8080                         │
 │                                                                  │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │  Events CRUD (新增)                                          ││
+│  │  Events CRUD                                                 ││
 │  │  POST   /api/events              建立賽事                    ││
 │  │  GET    /api/events              列出/搜尋賽事               ││
 │  │  GET    /api/events/:id          取得單一賽事                ││
@@ -55,12 +55,21 @@
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Python Agent 專屬                             │
+│                    Python Agent (RAG 架構)                       │
+│                                                                  │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │  ChromaDB - RAG (DSL 語法文件、範例查詢)                     ││
+│  │  ChromaDB - 意圖判斷 + Prompt 片段檢索                       ││
+│  │  • 用戶訊息 → 意圖分類                                       ││
+│  │  • 意圖 → 對應的 Prompt 片段                                 ││
 │  └─────────────────────────────────────────────────────────────┘│
+│                             │                                    │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │  Web Search - 搜尋類似賽事參考                               ││
+│  │  動態 Prompt 組合                                            ││
+│  │  BASE_PROMPT + INTENT_PROMPT + DSL_SPEC_PROMPT              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                             │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  LangChain ReAct Agent + Tools                              ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -86,113 +95,180 @@
 ```
 rules-engine/
 │
-├── cmd/rules-engine-demo/           # Go API Server (現有 + 擴充)
+├── cmd/rules-engine-demo/           # Go API Server
 │
 ├── internal/
 │   ├── rules/                       # Rule Engine (現有)
-│   ├── config/                      # 配置管理 (新增)
-│   ├── store/                       # PostgreSQL 存取層 (新增)
-│   └── api/                         # Events CRUD handlers (新增)
+│   ├── config/                      # 配置管理
+│   ├── store/                       # PostgreSQL 存取層
+│   └── api/                         # Events CRUD handlers
 │
-├── ai-poc-python/                   # Python Agent (新增)
+├── ai-poc-python/                   # Python Agent
 │   ├── app.py                       # Streamlit 入口
 │   ├── requirements.txt
 │   ├── .env.example
 │   │
 │   ├── agent/
 │   │   ├── core.py                  # Agent 主邏輯
-│   │   └── prompts.py               # System prompts
+│   │   ├── prompts.py               # System Prompt（完整版）
+│   │   └── prompt_fragments/        # Prompt 片段（Phase 3）
+│   │       ├── base.py
+│   │       ├── intents/
+│   │       │   ├── create_event.py
+│   │       │   ├── update_event.py
+│   │       │   └── ...
+│   │       └── dsl_specs/
+│   │           ├── pricing_rules.py
+│   │           ├── validation_rules.py
+│   │           └── form_schema.py
 │   │
 │   ├── tools/
-│   │   ├── events.py                # Events CRUD (HTTP client)
-│   │   ├── validation.py            # validate_dsl, calculate_price
-│   │   └── knowledge.py             # query_dsl_docs, web_search
+│   │   ├── http_client.py           # HTTP Client
+│   │   └── events.py                # Events CRUD Tools
 │   │
 │   ├── rag/
+│   │   ├── intent_classifier.py     # 意圖分類器（Phase 3）
+│   │   ├── prompt_retriever.py      # Prompt 檢索器（Phase 3）
 │   │   ├── embeddings.py            # ChromaDB 操作
-│   │   └── documents/               # DSL 語法文件
+│   │   └── documents/               # 意圖定義文件
 │   │
 │   └── config/
 │       └── settings.py
 │
-├── docker-compose.yml               # 新增
-├── Dockerfile                       # 新增
+├── docker-compose.yml
+├── Dockerfile
 │
-├── examples/                        # DSL 範例 (現有)
-└── docs/                            # 文件 (現有)
+├── examples/                        # DSL 範例
+└── docs/                            # 文件
 ```
 
 ---
 
 ## 開發階段
 
-### Phase 1: Go API Server 擴充
+### Phase 1: Go API Server 擴充 ✅ 已完成
 
 **目標**：新增 Events CRUD API + PostgreSQL + Docker 環境
 
-| 任務 | 說明 |
+| 任務 | 狀態 |
 |------|------|
-| 1.1 | 建立 `docker-compose.yml` (PostgreSQL + API) |
-| 1.2 | 建立 `Dockerfile` |
-| 1.3 | 新增 `internal/config` 配置管理 |
-| 1.4 | 新增 `internal/store` PostgreSQL 存取層 |
-| 1.5 | 新增 `internal/api` Events CRUD handlers |
-| 1.6 | 修改 `main.go` 整合新功能 |
-| 1.7 | 測試 API endpoints |
-
-**驗收標準**：
-- `docker-compose up` 可啟動完整環境
-- Events CRUD API 正常運作
-- 現有頁面 (`/`, `/editor`, `/preview`) 正常運作
+| docker-compose.yml | ✅ |
+| Dockerfile (Go) | ✅ |
+| internal/config | ✅ |
+| internal/store | ✅ |
+| internal/api | ✅ |
+| 整合到 main.go | ✅ |
 
 ---
 
-### Phase 2: Python Agent 基礎
+### Phase 2: Python Agent 基礎 ✅ 已完成
 
 **目標**：建立 Streamlit + LangChain Agent 基礎架構
 
-| 任務 | 說明 |
+| 任務 | 狀態 |
 |------|------|
-| 2.1 | 建立 `ai-poc-python/` 專案結構 |
-| 2.2 | Streamlit chat UI |
-| 2.3 | LangChain Agent 骨架 |
-| 2.4 | Events CRUD tools (HTTP client) |
-| 2.5 | validate_dsl / calculate_price tools |
-
-**驗收標準**：
-- 可透過對話建立新賽事
-- 可查詢/修改現有賽事
-- 可驗證 DSL 並計算價格
+| 專案結構 & requirements.txt | ✅ |
+| config/settings.py | ✅ |
+| tools/http_client.py | ✅ |
+| tools/events.py (7 個 Tools) | ✅ |
+| agent/core.py | ✅ |
+| agent/prompts.py (基礎版) | ✅ |
+| app.py (Streamlit UI) | ✅ |
+| Dockerfile (Python) | ✅ |
 
 ---
 
-### Phase 3: RAG 整合
+### Phase 2.5: 修正問題 + 完善 System Prompt ⏳ 進行中
 
-**目標**：加入 DSL 語法知識庫
+**目標**：讓基本功能可以正常運作
 
 | 任務 | 說明 |
 |------|------|
-| 3.1 | 整理 DSL 語法文件 (markdown) |
-| 3.2 | ChromaDB 設置與 embedding |
-| 3.3 | query_dsl_docs tool |
-| 3.4 | 改善 DSL 生成品質 |
+| 2.5.1 | 修正 `create_react_agent` 參數錯誤 |
+| 2.5.2 | 豐富 System Prompt，加入完整 DSL 規格與範例 |
+| 2.5.3 | 測試基本對話功能（建立、修改、查詢賽事） |
 
 **驗收標準**：
-- Agent 可正確查詢 DSL 語法
-- 生成的 DSL 符合規範
+- Agent 可正確生成 DSL
+- 建立賽事功能正常運作
+
+---
+
+### Phase 3: RAG 意圖判斷 + 動態 Prompt
+
+**目標**：使用 RAG 做意圖判斷，根據意圖動態組合 Prompt
+
+#### 架構
+
+```
+User Message
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│         ChromaDB 意圖判斷                │
+│                                         │
+│  "我想建立賽事" → intent: create_event  │
+│  "修改價格"     → intent: update_pricing│
+│  "加優惠"       → intent: add_discount  │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│         動態 Prompt 組合                 │
+│                                         │
+│  BASE_PROMPT                            │
+│  + INTENT_PROMPTS[intent]               │
+│  + DSL_SPEC_PROMPTS[related_specs]      │
+└─────────────────────────────────────────┘
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│         LangChain Agent 執行            │
+└─────────────────────────────────────────┘
+```
+
+#### 任務
+
+| 任務 | 說明 |
+|------|------|
+| 3.1 | 拆分 Phase 2.5 的 System Prompt 為多個片段 |
+| 3.2 | 定義意圖類別與對應的 Prompt 片段 |
+| 3.3 | ChromaDB 設置 |
+| 3.4 | 實作意圖分類器 (intent_classifier.py) |
+| 3.5 | 實作 Prompt 檢索與組合 (prompt_retriever.py) |
+| 3.6 | 對話狀態管理（多輪對話） |
+| 3.7 | 測試與優化 |
+
+#### 意圖分類
+
+| 意圖 | 觸發詞範例 | 需要的 Prompt 片段 |
+|------|-----------|-------------------|
+| create_event | 建立賽事、新增活動 | 建立流程 + pricing_rules + form_schema |
+| search_event | 查詢、找、列出 | 搜尋說明 |
+| update_pricing | 修改價格、改費用 | pricing_rules 規格 |
+| add_discount | 加優惠、折扣 | discount 規格 |
+| update_form | 修改欄位、加欄位 | form_schema 規格 |
+| delete_event | 刪除、移除 | 刪除確認流程 |
+| calculate_price | 算價格、預覽費用 | context 格式說明 |
+
+**驗收標準**：
+- RAG 意圖判斷準確率 > 80%
+- Prompt 根據意圖動態組合
+- Token 使用量比完整 Prompt 減少 30%+
 
 ---
 
 ### Phase 4: 完善功能
 
-**目標**：加入額外功能與優化
+**目標**：優化與額外功能
 
 | 任務 | 說明 |
 |------|------|
-| 4.1 | Web Search tool |
-| 4.2 | 對話流程優化 |
-| 4.3 | 錯誤處理與提示改善 |
-| 4.4 | UI 優化 |
+| 4.1 | Web Search tool（搜尋類似賽事參考） |
+| 4.2 | 對話流程優化（更好的引導） |
+| 4.3 | 錯誤處理改善 |
+| 4.4 | UI 優化（表單預覽整合） |
+| 4.5 | 性能測試與優化 |
 
 ---
 
@@ -202,78 +278,50 @@ rules-engine/
 
 | Tool | API Endpoint | 說明 |
 |------|--------------|------|
-| `create_event` | POST /api/events | 建立新賽事 |
 | `search_events` | GET /api/events?q=... | 搜尋賽事 |
 | `get_event` | GET /api/events/:id | 取得完整 DSL |
+| `create_event` | POST /api/events | 建立新賽事 |
 | `update_event` | PUT /api/events/:id | 更新賽事 |
 | `delete_event` | DELETE /api/events/:id | 刪除賽事 |
-
-### Validation & Calculation (呼叫 Go API)
-
-| Tool | API Endpoint | 說明 |
-|------|--------------|------|
-| `validate_dsl` | POST /api/events/:id/validate | 驗證 DSL 語法 |
+| `validate_event` | POST /api/events/:id/validate | 驗證 DSL |
 | `calculate_price` | POST /api/events/:id/calculate | 計算報名費用 |
-
-### Knowledge Query (Python 內部)
-
-| Tool | 說明 |
-|------|------|
-| `query_dsl_docs` | RAG 查詢 DSL 語法文件 |
-| `web_search` | 搜尋類似賽事參考 |
 
 ---
 
-## 對話範例
+## Prompt 開發策略
 
-### 建立新賽事
-
-```
-主辦方: 我要建立一個鐵人三項賽事
-
-Agent: 好的！請問這個賽事有哪些組別和價格？
-
-主辦方: 標準組3000元、半程組2000元、體驗組1500元
-
-Agent: 了解。請問有什麼優惠方案嗎？例如早鳥、團報、學生優惠等？
-
-主辦方: 早鳥到3月底前報名打9折，5人以上團報再折500
-
-Agent: 報名時需要收集哪些資料？
-
-主辦方: 姓名、性別、生日、聯絡方式、緊急聯絡人、T-shirt尺寸
-
-Agent: [呼叫 create_event]
-       [呼叫 validate_dsl]
-
-       ✅ 已建立賽事「鐵人三項賽事」
-       - ID: 550e8400-e29b-41d4-a716-446655440000
-       - 3 個組別定價規則
-       - 2 個優惠規則（早鳥、團報）
-       - 6 個表單欄位
-
-       要預覽表單或調整內容嗎？
-```
-
-### 修改賽事
+### 階段演進
 
 ```
-主辦方: 我想修改「2026大湖路跑」的10K組報名費，從1200改成1000
+Phase 2.5: 完整 System Prompt（單一大檔案）
+    │
+    │ 功能驗證完成後
+    ▼
+Phase 3: 拆分為 Prompt 片段
+    │
+    │ • BASE_PROMPT（固定）
+    │ • INTENT_PROMPTS（按意圖）
+    │ • DSL_SPEC_PROMPTS（按 DSL 結構）
+    │
+    ▼
+Phase 3: RAG 意圖判斷 + 動態組合
+```
 
-Agent: [呼叫 search_events("2026大湖路跑")]
-       [呼叫 get_event(id)]
+### Prompt 片段設計
 
-       找到賽事，目前 10K組 報名費為 $1,200。
-       確認要修改為 $1,000 嗎？
-
-主辦方: 對，確認
-
-Agent: [呼叫 update_event]
-       [呼叫 validate_dsl]
-
-       ✅ 已更新！
-       - 10K組報名費：$1,200 → $1,000
-       - DSL 驗證通過
+```
+prompt_fragments/
+├── base.py                 # 基礎人設、對話風格
+├── intents/
+│   ├── create_event.py     # 建立賽事的引導流程
+│   ├── update_event.py     # 修改賽事的流程
+│   ├── search_event.py     # 搜尋說明
+│   └── ...
+└── dsl_specs/
+    ├── pricing_rules.py    # pricing_rules 完整規格 + 範例
+    ├── validation_rules.py # validation_rules 完整規格 + 範例
+    ├── form_schema.py      # form_schema 完整規格 + 範例
+    └── discount.py         # 折扣規則說明
 ```
 
 ---
@@ -282,10 +330,10 @@ Agent: [呼叫 update_event]
 
 ```yaml
 services:
-  postgres:      # PostgreSQL 資料庫
+  postgres:      # PostgreSQL 資料庫 (:5432)
   api:           # Go API Server (:8080)
   streamlit:     # Python Agent UI (:8501)
-  chromadb:      # RAG 向量資料庫 (:8000)
+  chromadb:      # RAG 向量資料庫 (:8000) - Phase 3
 ```
 
 ---
@@ -301,14 +349,17 @@ SERVER_PORT=8080
 ### Python Agent
 ```
 GO_API_URL=http://api:8080
-ANTHROPIC_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+MODEL_NAME=claude-sonnet-4-20250514
 CHROMA_HOST=chromadb
 CHROMA_PORT=8000
 ```
 
 ---
 
-## 待確認事項
+## 已確認事項
 
-- [ ] LLM 選擇：Claude API / OpenAI / Ollama
-- [ ] Web Search 服務：Tavily / DuckDuckGo / SerpAPI
+- [x] LLM 選擇：Claude API
+- [x] 資料庫：PostgreSQL
+- [x] RAG 用途：意圖判斷 + 動態 Prompt 組合
+- [ ] Web Search 服務：待定
