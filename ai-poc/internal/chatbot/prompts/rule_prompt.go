@@ -47,7 +47,7 @@ user.race_type（組別）、user.age（年齡）、team_size（團隊人數）�
 ⚠️ 重要：rules 陣列中每個規則必須嚴格遵守以下結構！
 {"intent":"rule_input","event_name":"活動名稱或空","rules":[規則物件],"questions":[],"can_generate":布林值,"message":"回覆"}
 
-## 規則物件結構（必須完全遵守）
+## 定價規則物件結構
 {
   "id": "new_pricing_xxx",
   "action": "add",
@@ -57,6 +57,19 @@ user.race_type（組別）、user.age（年齡）、team_size（團隊人數）�
     "description": "描述文字",
     "condition": {"type":"equals","field":"user.race_type","value":"組別"},
     "action": {"type":"set_price","item":"registration_fee","value":金額,"label":"標籤"}
+  }
+}
+
+## 驗證規則物件結構（用於報名期間、年齡限制等）
+{
+  "id": "new_validation_xxx",
+  "action": "add",
+  "rule_type": "validation",
+  "data": {
+    "description": "描述文字",
+    "condition": {"type":"datetime_before","field":"register_date","value":"截止日期"},
+    "error_type": "blocking",
+    "error_message": "錯誤訊息"
   }
 }
 
@@ -76,7 +89,15 @@ user.race_type（組別）、user.age（年齡）、team_size（團隊人數）�
 
 ## 範例4：新增 21K 組別
 用戶: "半馬報名費1080元"
-輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_21k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1080,"label":"21K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 21K 組，報名費 NT$1,080。"}`
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_pricing_21k","action":"add","rule_type":"pricing","data":{"priority":0,"description":"21K 報名費","condition":{"type":"equals","field":"user.race_type","value":"21K"},"action":{"type":"set_price","item":"registration_fee","value":1080,"label":"21K 報名費"}}}],"questions":[],"can_generate":true,"message":"已新增 21K 組，報名費 NT$1,080。"}
+
+## 範例5：設定報名截止日期
+用戶: "報名截止日期是2026年4月30日"
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_validation_deadline","action":"add","rule_type":"validation","data":{"description":"報名截止日期限制","condition":{"type":"datetime_before","field":"register_date","value":"2026-04-30T23:59:59+08:00"},"error_type":"blocking","error_message":"報名已截止，截止日期為 2026/4/30"}}],"questions":[],"can_generate":true,"message":"已設定報名截止日期為 2026/4/30。"}
+
+## 範例6：設定報名期間
+用戶: "報名期間是即日起至2026-4-30"
+輸出: {"intent":"rule_input","event_name":"","rules":[{"id":"new_validation_period","action":"add","rule_type":"validation","data":{"description":"報名期間限制","condition":{"type":"datetime_before","field":"register_date","value":"2026-04-30T23:59:59+08:00"},"error_type":"blocking","error_message":"報名已截止，報名期間至 2026/4/30"}}],"questions":[],"can_generate":true,"message":"已設定報名期間至 2026/4/30。"}`
 
 // RulePromptForModify is the prompt for modifying existing rules
 const RulePromptForModify = `你是賽事報名規則助手。用戶要修改現有規則。
