@@ -38,11 +38,29 @@ services:
       - "8501:8501"
     depends_on:
       - api
+      - chromadb
     env_file:
       - ./ai-poc-python/.env  # 從這裡讀取環境變數
     environment:
-      # 覆蓋 .env 中的 GO_API_URL（Docker 內部網路）
+      # 覆蓋 .env 中的設定（Docker 內部網路）
       GO_API_URL: http://api:8080
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: "8000"
+    volumes:
+      - chroma_model_cache:/root/.cache/chroma  # 快取 embedding 模型
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: rules-engine-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
 
 volumes:
   postgres_data:
+  chroma_data:
+  chroma_model_cache:

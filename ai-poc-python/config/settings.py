@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     chroma_host: str = "localhost"
     chroma_port: int = 8000
 
+    # Google API Key (for Gemini Embedding - Phase 3)
+    google_api_key: str = ""
+
     class Config:
         """Pydantic 設定"""
 

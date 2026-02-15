@@ -178,23 +178,25 @@ rules-engine/
 
 ---
 
-### Phase 2.5: 修正問題 + 完善 System Prompt ⏳ 進行中
+### Phase 2.5: 修正問題 + 完善 System Prompt ✅ 已完成
 
 **目標**：讓基本功能可以正常運作
 
-| 任務 | 說明 |
+| 任務 | 狀態 |
 |------|------|
-| 2.5.1 | 修正 `create_react_agent` 參數錯誤 |
-| 2.5.2 | 豐富 System Prompt，加入完整 DSL 規格與範例 |
-| 2.5.3 | 測試基本對話功能（建立、修改、查詢賽事） |
+| 2.5.1 修正 `create_react_agent` 參數錯誤 | ✅ |
+| 2.5.2 豐富 System Prompt，加入完整 DSL 規格與範例 | ✅ |
+| 2.5.3 測試基本對話功能（建立、修改、查詢賽事） | ✅ |
+| 2.5.4 Preview 頁面整合（支援 `?event_id=xxx` 參數） | ✅ |
 
 **驗收標準**：
-- Agent 可正確生成 DSL
-- 建立賽事功能正常運作
+- ✅ Agent 可正確生成 DSL
+- ✅ 建立賽事功能正常運作
+- ✅ Preview 頁面可透過 URL 參數載入賽事
 
 ---
 
-### Phase 3: RAG 意圖判斷 + 動態 Prompt
+### Phase 3: RAG 意圖判斷 + 動態 Prompt ⏳ 進行中
 
 **目標**：使用 RAG 做意圖判斷，根據意圖動態組合 Prompt
 
@@ -208,8 +210,8 @@ User Message
 │         ChromaDB 意圖判斷                │
 │                                         │
 │  "我想建立賽事" → intent: create_event  │
-│  "修改價格"     → intent: update_pricing│
-│  "加優惠"       → intent: add_discount  │
+│  "修改價格"     → intent: update_event  │
+│  "查詢賽事"     → intent: search_event  │
 └─────────────────────────────────────────┘
     │
     ▼
@@ -219,6 +221,8 @@ User Message
 │  BASE_PROMPT                            │
 │  + INTENT_PROMPTS[intent]               │
 │  + DSL_SPEC_PROMPTS[related_specs]      │
+│                                         │
+│  (update_event 會根據關鍵字載入對應規格)  │
 └─────────────────────────────────────────┘
     │
     ▼
@@ -229,27 +233,79 @@ User Message
 
 #### 任務
 
-| 任務 | 說明 |
+| 任務 | 狀態 |
 |------|------|
-| 3.1 | 拆分 Phase 2.5 的 System Prompt 為多個片段 |
-| 3.2 | 定義意圖類別與對應的 Prompt 片段 |
-| 3.3 | ChromaDB 設置 |
-| 3.4 | 實作意圖分類器 (intent_classifier.py) |
-| 3.5 | 實作 Prompt 檢索與組合 (prompt_retriever.py) |
-| 3.6 | 對話狀態管理（多輪對話） |
-| 3.7 | 測試與優化 |
+| 3.1 拆分 System Prompt 為多個片段 | ✅ |
+| 3.2 定義意圖類別與對應的 Prompt 片段 | ✅ |
+| 3.3 ChromaDB 設置 (docker-compose) | ✅ |
+| 3.4 實作意圖分類器 (intent_classifier.py) | ✅ |
+| 3.5 實作 Prompt 檢索與組合 (prompt_retriever.py) | ✅ |
+| 3.6 整合到 agent/core.py | ✅ |
+| 3.7 Streamlit UI 顯示 RAG 狀態 | ✅ |
+| 3.8 **Embedding 改用 Gemini API** | ⏳ 進行中 |
+| 3.9 測試與優化 | 🔜 待執行 |
 
-#### 意圖分類
+#### 意圖分類（簡化為 8 類）
 
 | 意圖 | 觸發詞範例 | 需要的 Prompt 片段 |
 |------|-----------|-------------------|
-| create_event | 建立賽事、新增活動 | 建立流程 + pricing_rules + form_schema |
-| search_event | 查詢、找、列出 | 搜尋說明 |
-| update_pricing | 修改價格、改費用 | pricing_rules 規格 |
-| add_discount | 加優惠、折扣 | discount 規格 |
-| update_form | 修改欄位、加欄位 | form_schema 規格 |
-| delete_event | 刪除、移除 | 刪除確認流程 |
-| calculate_price | 算價格、預覽費用 | context 格式說明 |
+| create_event | 建立賽事、新增活動 | CREATE_EVENT + 所有 DSL_SPECS |
+| update_event | 修改價格、改費用、改欄位 | UPDATE_EVENT + 關鍵字偵測對應規格 |
+| search_event | 查詢、找、列出 | SEARCH_EVENT |
+| get_event | 查看詳細、取得資料 | SEARCH_EVENT |
+| delete_event | 刪除、移除 | DELETE_EVENT |
+| calculate_price | 算價格、預覽費用 | CALCULATE_PRICE |
+| preview_event | 預覽表單 | PREVIEW_EVENT |
+| general | 其他一般對話 | 僅 BASE_PROMPT |
+
+#### update_event 關鍵字偵測
+
+當意圖為 `update_event` 時，會偵測訊息中的關鍵字來決定載入哪些 DSL 規格：
+
+| 關鍵字類別 | 關鍵字 | 載入的規格 |
+|-----------|--------|-----------|
+| pricing | 價格、費用、報名費... | PRICING_RULES + CONDITIONS |
+| discount | 優惠、折扣、早鳥... | PRICING_RULES + CONDITIONS |
+| form | 欄位、表單... | FORM_SCHEMA |
+| validation | 驗證、限制... | VALIDATION_RULES + CONDITIONS |
+
+#### 已完成的檔案
+
+```
+ai-poc-python/
+├── agent/prompt_fragments/
+│   ├── __init__.py
+│   ├── base.py                      # 核心人設 + 能力 + DSL 基礎
+│   ├── intents/
+│   │   ├── create_event.py          # 建立流程
+│   │   ├── update_event.py          # 修改流程
+│   │   ├── search_event.py          # 搜尋說明
+│   │   ├── delete_event.py          # 刪除確認
+│   │   ├── calculate_price.py       # 價格計算
+│   │   └── preview_event.py         # 預覽說明
+│   └── dsl_specs/
+│       ├── overview.py              # DSL 結構概覽 (必要/選擇欄位)
+│       ├── pricing_rules.py         # 價格規則規格
+│       ├── validation_rules.py      # 驗證規則規格
+│       ├── form_schema.py           # 表單欄位規格
+│       └── conditions.py            # 條件語法規格
+│
+├── rag/
+│   ├── intent_documents.py          # 意圖定義 + 範例 + 關鍵字
+│   ├── intent_classifier.py         # ChromaDB 意圖分類器
+│   └── prompt_retriever.py          # 動態 Prompt 組合
+```
+
+#### 待解決問題
+
+**Embedding 模型下載緩慢**
+
+- 原因：`all-MiniLM-L6-v2` (79MB) 下載速度只有 ~10KB/s
+- 解決方案：改用 Google Gemini Embedding API
+- 需要新增：
+  - `GOOGLE_API_KEY` 環境變數
+  - `rag/embeddings.py` - Gemini Embedding 封裝
+  - 修改 `intent_classifier.py` 使用 Gemini
 
 **驗收標準**：
 - RAG 意圖判斷準確率 > 80%
@@ -353,6 +409,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 MODEL_NAME=claude-sonnet-4-20250514
 CHROMA_HOST=chromadb
 CHROMA_PORT=8000
+GOOGLE_API_KEY=AIza...    # Gemini Embedding API (Phase 3)
 ```
 
 ---
@@ -362,4 +419,48 @@ CHROMA_PORT=8000
 - [x] LLM 選擇：Claude API
 - [x] 資料庫：PostgreSQL
 - [x] RAG 用途：意圖判斷 + 動態 Prompt 組合
+- [x] Embedding：Google Gemini Embedding API
 - [ ] Web Search 服務：待定
+
+---
+
+## 接下來的工作 (Phase 3 剩餘)
+
+### 1. Gemini Embedding 整合 🔜
+
+```python
+# 需要新增/修改的檔案：
+
+# 1. ai-poc-python/requirements.txt
+# 新增：google-generativeai>=0.3.0
+
+# 2. ai-poc-python/config/settings.py
+# 新增：google_api_key: str = ""
+
+# 3. ai-poc-python/.env.example
+# 新增：GOOGLE_API_KEY=
+
+# 4. ai-poc-python/rag/embeddings.py (新檔案)
+class GeminiEmbeddingFunction:
+    """ChromaDB compatible embedding function using Gemini API."""
+
+    def __call__(self, input: list[str]) -> list[list[float]]:
+        # 呼叫 Gemini embedding API
+        pass
+
+# 5. ai-poc-python/rag/intent_classifier.py
+# 修改：使用 GeminiEmbeddingFunction 取代預設 embedding
+```
+
+### 2. 測試 RAG 功能
+
+- [ ] 確認意圖分類正確運作
+- [ ] 確認動態 Prompt 正確組合
+- [ ] 測試各種對話場景
+- [ ] 驗證 Token 使用量減少
+
+### 3. Phase 4（可選優化）
+
+- UI 優化
+- 錯誤處理改善
+- 性能測試

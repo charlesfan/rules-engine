@@ -109,6 +109,17 @@ def handle_user_input(user_input: str):
         # 顯示回應
         st.markdown(response)
 
+        # 顯示意圖分類結果（如果有 RAG）
+        intent = st.session_state.agent.get_last_intent()
+        if intent:
+            with st.expander("🔍 RAG 意圖分類", expanded=False):
+                st.write(f"**意圖:** {intent.get('intent_name', 'N/A')} (`{intent.get('intent_id', 'N/A')}`)")
+                st.write(f"**信心度:** {intent.get('confidence', 0):.2%}")
+                if intent.get('similar_examples'):
+                    st.write("**相似範例:**")
+                    for ex in intent['similar_examples']:
+                        st.write(f"- {ex['text']} ({ex['similarity']:.2%})")
+
     # 4. 加入對話歷史
     st.session_state.messages.append({
         "role": "assistant",
@@ -129,6 +140,10 @@ def main():
     st.title("🏃 賽事上架助手")
     st.caption("透過對話建立和管理賽事報名規則")
 
+    # ========== 初始化（必須在側邊欄之前）==========
+    init_session_state()
+    init_agent()
+
     # ========== 側邊欄 ==========
     with st.sidebar:
         st.header("設定")
@@ -136,11 +151,22 @@ def main():
         # 清除對話按鈕
         if st.button("🗑️ 清除對話", use_container_width=True):
             st.session_state.messages = []
-            if st.session_state.agent:
-                st.session_state.agent.clear_history()
+            agent = st.session_state.get("agent")
+            if agent:
+                agent.clear_history()
             st.rerun()  # 重新執行整個 script
 
         st.divider()  # 分隔線
+
+        # RAG 狀態
+        st.header("RAG 狀態")
+        agent = st.session_state.get("agent")
+        if agent and agent.use_rag:
+            st.success("✅ RAG 已啟用")
+        else:
+            st.warning("⚠️ RAG 未啟用（使用完整 Prompt）")
+
+        st.divider()
 
         # 使用說明
         st.header("使用說明")
@@ -159,10 +185,6 @@ def main():
         3. 優惠規則
         4. 報名欄位
         """)
-
-    # ========== 初始化 ==========
-    init_session_state()
-    init_agent()
 
     # ========== 聊天介面 ==========
     # 顯示歷史訊息

@@ -6,13 +6,15 @@ LangChain Agent Core.
 2. 將 Tools 綁定到 Agent
 3. 管理對話歷史
 4. 執行 Agent Loop
+5. RAG 意圖分類 + 動態 Prompt 組合
 
 LangChain Agent 的運作原理：
 1. 收到用戶訊息
-2. LLM 決定是否需要使用 Tool
-3. 如果需要，執行 Tool 並將結果給 LLM
-4. LLM 根據 Tool 結果生成回應
-5. 重複 2-4 直到 LLM 決定直接回應
+2. RAG 分類意圖，組合對應的 Prompt
+3. LLM 決定是否需要使用 Tool
+4. 如果需要，執行 Tool 並將結果給 LLM
+5. LLM 根據 Tool 結果生成回應
+6. 重複 3-5 直到 LLM 決定直接回應
 """
 
 from langchain_anthropic import ChatAnthropic
@@ -20,8 +22,19 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 from config.settings import settings
-from agent.prompts import SYSTEM_PROMPT
 from tools.events import all_tools
+
+# RAG components (optional, graceful fallback if not available)
+try:
+    from rag.intent_classifier import IntentClassifier
+    from rag.prompt_retriever import PromptRetriever
+    RAG_AVAILABLE = True
+except Exception as e:
+    print(f"[Agent] RAG not available: {e}")
+    RAG_AVAILABLE = False
+
+# Fallback to full prompt if RAG not available
+from agent.prompts import SYSTEM_PROMPT
 
 
 class EventAgent:
@@ -31,36 +44,53 @@ class EventAgent:
     使用 LangChain 的 ReAct Agent 架構：
     - ReAct = Reasoning + Acting
     - Agent 會「思考」要做什麼，然後「行動」（呼叫 Tool）
+
+    RAG 增強功能：
+    - 意圖分類：判斷用戶想做什麼
+    - 動態 Prompt：根據意圖載入對應的規格文件
     """
 
-    def __init__(self):
+    def __init__(self, use_rag: bool = True):
         """
         初始化 Agent。
 
-        建立 LLM 和 Agent 實例。
+        Args:
+            use_rag: 是否啟用 RAG 意圖分類（預設啟用）
         """
-        # 1. 建立 Claude LLM
-        # ChatAnthropic 是 LangChain 對 Claude API 的封裝
         self.llm = ChatAnthropic(
             model=settings.model_name,
             api_key=settings.anthropic_api_key,
             max_tokens=4096,
         )
 
-        # 2. 建立 ReAct Agent
-        # create_react_agent 會自動處理：
-        # - Tool 呼叫的 loop
-        # - 錯誤重試
-        # - 對話歷史管理
+        # RAG components
+        self.use_rag = use_rag and RAG_AVAILABLE
+        self.intent_classifier = None
+        self.prompt_retriever = None
+
+        if self.use_rag:
+            try:
+                print("[Agent] Initializing RAG (this may take a while on first run)...")
+                self.intent_classifier = IntentClassifier()
+                self.prompt_retriever = PromptRetriever()
+                print("[Agent] RAG enabled successfully")
+            except Exception as e:
+                print(f"[Agent] RAG initialization failed: {e}")
+                print("[Agent] Falling back to full prompt mode")
+                self.use_rag = False
+
+        # Create default agent (will be recreated with dynamic prompt if RAG enabled)
         self.agent = create_react_agent(
             model=self.llm,
             tools=all_tools,
-            prompt=SYSTEM_PROMPT,  # System prompt
+            prompt=SYSTEM_PROMPT,
         )
 
-        # 3. 對話歷史
-        # 保存所有訊息，讓 Agent 有記憶
+        # Conversation history
         self.messages: list = []
+
+        # Last classification result (for debugging)
+        self.last_intent: dict = {}
 
     def chat(self, user_message: str) -> str:
         """
@@ -72,11 +102,14 @@ class EventAgent:
         Returns:
             Agent 的回應文字
         """
-        # 1. 加入用戶訊息到歷史
+        # 1. RAG: 分類意圖並組合動態 Prompt
+        if self.use_rag:
+            self._update_prompt_for_intent(user_message)
+
+        # 2. 加入用戶訊息到歷史
         self.messages.append(HumanMessage(content=user_message))
 
-        # 2. 執行 Agent
-        # invoke() 會執行完整的 ReAct loop
+        # 3. 執行 Agent (ReAct loop)
         result = self.agent.invoke({
             "messages": self.messages,
         })
@@ -128,3 +161,39 @@ class EventAgent:
             elif isinstance(msg, AIMessage):
                 history.append(("assistant", msg.content))
         return history
+
+    def _update_prompt_for_intent(self, message: str):
+        """
+        根據用戶訊息分類意圖，並更新 Agent 的 Prompt。
+
+        Args:
+            message: 用戶訊息
+        """
+        # Classify intent
+        self.last_intent = self.intent_classifier.classify(message)
+        intent_id = self.last_intent["intent_id"]
+
+        # Compose dynamic prompt
+        dynamic_prompt = self.prompt_retriever.compose(intent_id, message)
+
+        # Get prompt stats for logging
+        stats = self.prompt_retriever.get_stats(intent_id, message)
+        print(f"[RAG] Intent: {intent_id} ({self.last_intent['confidence']:.2f}), "
+              f"Fragments: {stats['fragment_count']}, "
+              f"Tokens: ~{stats['estimated_tokens']}")
+
+        # Recreate agent with new prompt
+        self.agent = create_react_agent(
+            model=self.llm,
+            tools=all_tools,
+            prompt=dynamic_prompt,
+        )
+
+    def get_last_intent(self) -> dict:
+        """
+        取得最後一次的意圖分類結果（用於除錯）。
+
+        Returns:
+            dict with intent_id, intent_name, confidence, similar_examples
+        """
+        return self.last_intent
