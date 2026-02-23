@@ -9,6 +9,9 @@ langchain-community>=0.0.20   # 社群工具（如 Web Search）
 # HTTP Client
 httpx>=0.27.0                 # 現代化的 async HTTP client，比 requests 更好
 
+# Web Search
+ddgs>=6.0.0                   # DuckDuckGo search, required by langchain
+
 # Environment Variables
 python-dotenv>=1.0.0          # 讀取 .env 檔案
 

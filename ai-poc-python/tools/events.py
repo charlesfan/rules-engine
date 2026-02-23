@@ -14,6 +14,7 @@ import json
 from typing import Any
 from langchain_core.tools import tool
 from tools.http_client import api_client
+from tools.web_search import web_search
 
 
 @tool
@@ -215,4 +216,5 @@ all_tools = [
     delete_event,
     validate_event,
     calculate_price,
+    web_search,
 ]
