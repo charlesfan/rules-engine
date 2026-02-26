@@ -16,23 +16,6 @@ import streamlit as st
 from agent.core import EventAgent
 
 
-# ============================================================
-# Streamlit 基本概念
-# ============================================================
-#
-# 1. st.session_state - 跨 rerun 的狀態保存
-#    Streamlit 每次互動都會重新執行整個 script
-#    用 session_state 保存需要持久化的資料
-#
-# 2. st.chat_message - 聊天氣泡 UI
-#    自動處理用戶/AI 的不同樣式
-#
-# 3. st.chat_input - 聊天輸入框
-#    自動處理 Enter 送出
-#
-# ============================================================
-
-
 def init_session_state():
     """
     初始化 session state。
@@ -67,7 +50,7 @@ def init_agent():
         except Exception as e:
             st.error(f"Agent 初始化失敗：{str(e)}")
             st.error("請確認 .env 檔案中的 ANTHROPIC_API_KEY 設定正確")
-            st.stop()  # 停止執行
+            st.stop()
 
 
 def display_chat_history():
@@ -102,23 +85,11 @@ def handle_user_input(user_input: str):
 
     # 3. 取得 Agent 回應
     with st.chat_message("assistant"):
-        # st.spinner 顯示載入動畫
         with st.spinner("思考中..."):
             response = st.session_state.agent.chat(user_input)
 
         # 顯示回應
         st.markdown(response)
-
-        # 顯示意圖分類結果（如果有 RAG）
-        intent = st.session_state.agent.get_last_intent()
-        if intent:
-            with st.expander("🔍 RAG 意圖分類", expanded=False):
-                st.write(f"**意圖:** {intent.get('intent_name', 'N/A')} (`{intent.get('intent_id', 'N/A')}`)")
-                st.write(f"**信心度:** {intent.get('confidence', 0):.2%}")
-                if intent.get('similar_examples'):
-                    st.write("**相似範例:**")
-                    for ex in intent['similar_examples']:
-                        st.write(f"- {ex['text']} ({ex['similarity']:.2%})")
 
     # 4. 加入對話歷史
     st.session_state.messages.append({
@@ -154,17 +125,14 @@ def main():
             agent = st.session_state.get("agent")
             if agent:
                 agent.clear_history()
-            st.rerun()  # 重新執行整個 script
+            st.rerun()
 
-        st.divider()  # 分隔線
+        st.divider()
 
-        # RAG 狀態
-        st.header("RAG 狀態")
-        agent = st.session_state.get("agent")
-        if agent and agent.use_rag:
-            st.success("✅ RAG 已啟用")
-        else:
-            st.warning("⚠️ RAG 未啟用（使用完整 Prompt）")
+        # 系統狀態
+        st.header("系統狀態")
+        st.success("✅ Agent 已初始化")
+        st.info("📚 DSL 知識庫：透過 search_dsl_rules 查詢")
 
         st.divider()
 
@@ -184,6 +152,11 @@ def main():
         2. 組別與價格
         3. 優惠規則
         4. 報名欄位
+
+        **進階功能：**
+        - 設定早鳥優惠
+        - 設定團報折扣
+        - 設定年齡限制
         """)
 
     # ========== 聊天介面 ==========
@@ -191,20 +164,9 @@ def main():
     display_chat_history()
 
     # 輸入框
-    # st.chat_input 會在頁面底部顯示固定的輸入框
     if user_input := st.chat_input("輸入訊息..."):
         handle_user_input(user_input)
 
-
-# ============================================================
-# Python 的 main pattern
-# ============================================================
-# if __name__ == "__main__":
-#     這段程式碼只會在直接執行這個檔案時執行
-#     如果是被 import，則不會執行
-#
-# 但 Streamlit 有自己的執行方式，所以直接呼叫 main()
-# ============================================================
 
 if __name__ == "__main__":
     main()

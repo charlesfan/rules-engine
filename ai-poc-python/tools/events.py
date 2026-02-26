@@ -15,6 +15,7 @@ from typing import Any
 from langchain_core.tools import tool
 from tools.http_client import api_client
 from tools.web_search import web_search
+from tools.dsl_search import search_dsl_rules
 
 
 @tool
@@ -217,4 +218,5 @@ all_tools = [
     validate_event,
     calculate_price,
     web_search,
+    search_dsl_rules,  # DSL knowledge retrieval
 ]

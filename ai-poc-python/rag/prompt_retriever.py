@@ -4,18 +4,20 @@ Prompt Retriever for Dynamic Prompt Composition.
 Composes prompts based on detected intent and message keywords.
 """
 
-from agent.prompt_fragments.base import BASE_PROMPT
-from agent.prompt_fragments.intents.create_event import CREATE_EVENT_PROMPT
-from agent.prompt_fragments.intents.update_event import UPDATE_EVENT_PROMPT
-from agent.prompt_fragments.intents.search_event import SEARCH_EVENT_PROMPT
-from agent.prompt_fragments.intents.delete_event import DELETE_EVENT_PROMPT
-from agent.prompt_fragments.intents.calculate_price import CALCULATE_PRICE_PROMPT
-from agent.prompt_fragments.intents.preview_event import PREVIEW_EVENT_PROMPT
-from agent.prompt_fragments.dsl_specs.overview import DSL_OVERVIEW_PROMPT
-from agent.prompt_fragments.dsl_specs.pricing_rules import PRICING_RULES_PROMPT
-from agent.prompt_fragments.dsl_specs.validation_rules import VALIDATION_RULES_PROMPT
-from agent.prompt_fragments.dsl_specs.form_schema import FORM_SCHEMA_PROMPT
-from agent.prompt_fragments.dsl_specs.conditions import CONDITIONS_PROMPT
+from agent.prompt_fragments import (
+    BASE_PROMPT,
+    CREATE_EVENT_PROMPT,
+    UPDATE_EVENT_PROMPT,
+    SEARCH_EVENT_PROMPT,
+    DELETE_EVENT_PROMPT,
+    CALCULATE_PRICE_PROMPT,
+    PREVIEW_EVENT_PROMPT,
+    DSL_OVERVIEW_PROMPT,
+    PRICING_RULES_PROMPT,
+    VALIDATION_RULES_PROMPT,
+    FORM_SCHEMA_PROMPT,
+    CONDITIONS_PROMPT,
+)
 
 from .intent_documents import UPDATE_KEYWORDS
 
